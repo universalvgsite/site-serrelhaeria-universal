@@ -56,6 +56,26 @@ function safeParse(s, fallback){ try{return JSON.parse(s)}catch{return fallback}
 function normalizeEmail(v=''){ return String(v).trim().toLowerCase(); }
 function id(prefix='id'){ return `${prefix}_${Date.now().toString(36)}_${crypto.randomUUID().slice(0,8)}`; }
 
+function storageConfig(context){
+  const baseUrl=String(context.env.SUPABASE_URL||'').trim().replace(/\/+$/,'');
+  const secretKey=String(context.env.SUPABASE_SECRET_KEY||'').trim();
+  const publicBucket=String(context.env.SUPABASE_PUBLIC_BUCKET||'universal-produtos').trim();
+  const privateBucket=String(context.env.SUPABASE_PRIVATE_BUCKET||'universal-anexos').trim();
+  if(!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(baseUrl) || !secretKey || !publicBucket || !privateBucket) return null;
+  return {baseUrl,secretKey,publicBucket,privateBucket};
+}
+function storageHeaders(secretKey, extra={}){
+  const headers=new Headers({'apikey':secretKey,...extra});
+  // As chaves service_role antigas são JWTs. As novas sb_secret_* devem ficar apenas em apikey.
+  if(secretKey.split('.').length===3) headers.set('authorization',`Bearer ${secretKey}`);
+  return headers;
+}
+function objectPath(key){ return String(key).split('/').map(encodeURIComponent).join('/'); }
+function bucketForScope(config,scope){ return scope==='public'?config.publicBucket:config.privateBucket; }
+function storageObjectUrl(config,bucket,key,isPublic=false){
+  return `${config.baseUrl}/storage/v1/object/${isPublic?'public/':''}${encodeURIComponent(bucket)}/${objectPath(key)}`;
+}
+
 async function sha256(input){
   const data = typeof input === 'string' ? new TextEncoder().encode(input) : input;
   const digest = await crypto.subtle.digest('SHA-256', data);
@@ -227,7 +247,7 @@ async function route(context){
   const seg=path.split('/').filter(Boolean).map(decodeURIComponent);
   const user=await getSession(context);
 
-  if(path==='health' && method==='GET') return json({ok:true,service:'Universal',time:nowISO()});
+  if(path==='health' && method==='GET') return json({ok:true,service:'Universal',storage:storageConfig(context)?'supabase':'not_configured',time:nowISO()});
 
   if(path==='bootstrap/status' && method==='GET'){
     const row=await context.env.DB.prepare(`SELECT COUNT(*) c FROM users`).first();
@@ -288,10 +308,21 @@ async function route(context){
     const scope=seg[1], key=seg.slice(2).join('/');
     if(!key) return new Response('Not found',{status:404});
     if(scope!=='public') { const er=requireAuth(user); if(er) return er; }
-    if(!context.env.MEDIA) return new Response('R2 binding MEDIA não configurado.',{status:503});
-    const obj=await context.env.MEDIA.get(`${scope}/${key}`); if(!obj) return new Response('Not found',{status:404});
-    const headers=new Headers(); obj.writeHttpMetadata(headers); headers.set('etag',obj.httpEtag); headers.set('cache-control',scope==='public'?'public, max-age=86400':'private, no-store');
-    return new Response(obj.body,{headers});
+    const config=storageConfig(context);
+    if(!config) return new Response('Supabase Storage não configurado.',{status:503});
+    const bucket=bucketForScope(config,scope);
+    if(scope==='public') return Response.redirect(storageObjectUrl(config,bucket,key,true),302);
+    const stored=await fetch(storageObjectUrl(config,bucket,key),{headers:storageHeaders(config.secretKey)});
+    if(stored.status===404) return new Response('Not found',{status:404});
+    if(!stored.ok){
+      console.error('Falha ao ler arquivo privado no Supabase Storage.',stored.status);
+      return new Response('Falha ao acessar arquivo.',{status:502});
+    }
+    const headers=new Headers({'cache-control':'private, no-store'});
+    for(const name of ['content-type','content-length','content-disposition','etag']){
+      const value=stored.headers.get(name); if(value) headers.set(name,value);
+    }
+    return new Response(stored.body,{headers});
   }
 
   const authErr=requireAuth(user); if(authErr) return authErr;
@@ -310,16 +341,27 @@ async function route(context){
   }
 
   if(path==='upload' && method==='POST'){
-    if(!context.env.MEDIA) return json({error:'R2 binding MEDIA não configurado.'},503);
+    const config=storageConfig(context);
+    if(!config) return json({error:'Supabase Storage não configurado no Cloudflare.'},503);
     const form=await req.formData(); const file=form.get('file'); let scope=String(form.get('scope')||'private');
     if(scope!=='public') scope='private';
     if(!(file instanceof File)) return json({error:'Arquivo ausente.'},400);
-    if(file.size>12*1024*1024) return json({error:'Arquivo excede 12 MB.'},413);
-    const allowed=['image/jpeg','image/png','image/webp','image/gif','application/pdf'];
+    const maxBytes=scope==='public'?3*1024*1024:12*1024*1024;
+    if(file.size>maxBytes) return json({error:`Arquivo excede ${scope==='public'?3:12} MB.`},413);
+    const allowed=scope==='public'?['image/jpeg','image/png','image/webp']:['image/jpeg','image/png','image/webp','application/pdf'];
     if(!allowed.includes(file.type)) return json({error:'Tipo de arquivo não permitido.'},415);
     const ext=(file.name.split('.').pop()||'bin').replace(/[^a-z0-9]/gi,'').toLowerCase();
     const key=`${Date.now()}-${crypto.randomUUID().slice(0,10)}.${ext}`;
-    await context.env.MEDIA.put(`${scope}/${key}`,file.stream(),{httpMetadata:{contentType:file.type},customMetadata:{originalName:file.name,userId:user.id}});
+    const bucket=bucketForScope(config,scope);
+    const uploaded=await fetch(storageObjectUrl(config,bucket,key),{
+      method:'POST',
+      headers:storageHeaders(config.secretKey,{'content-type':file.type,'cache-control':scope==='public'?'86400':'3600','x-upsert':'false'}),
+      body:file.stream()
+    });
+    if(!uploaded.ok){
+      console.error('Falha no upload para o Supabase Storage.',uploaded.status);
+      return json({error:'Não foi possível armazenar o arquivo. Confira os buckets e as variáveis do Supabase.'},502);
+    }
     return json({ok:true,key,scope,url:`/api/media/${scope}/${encodeURIComponent(key)}`,name:file.name,type:file.type,size:file.size});
   }
 

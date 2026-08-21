@@ -9,7 +9,7 @@ Pacote limpo para GitHub e Cloudflare Pages. Ele não contém usuários, cliente
 - painel administrativo instalável em `/painel/`;
 - API em `/api/*` com Cloudflare Pages Functions;
 - banco de dados Cloudflare D1 pelo binding `DB`;
-- imagens e documentos no Cloudflare R2 pelo binding `MEDIA`;
+- imagens e documentos no Supabase Storage, separados entre conteúdo público e privado;
 - login individual, perfis, permissões e auditoria;
 - cadastro de clientes durante a criação do orçamento;
 - fluxo simplificado: orçamento gerado → pedido + OS → produção → conferência → entrega;
@@ -66,26 +66,46 @@ Database: universal-db
 
 As tabelas são criadas automaticamente. O `schema.sql` serve como referência e recuperação.
 
-## 4. Configurar os arquivos R2
+## 4. Configurar os arquivos no Supabase Storage
 
-Crie um bucket R2, por exemplo `universal-media`, e adicione ao projeto Pages:
+Crie um projeto Supabase separado para a Universal e, em **Storage**, configure:
 
 ```text
-Variable name: MEDIA
-Bucket: universal-media
+Bucket: universal-produtos
+Tipo: público
+Limite por arquivo: 3 MB
+Tipos permitidos: image/jpeg, image/png, image/webp
+
+Bucket: universal-anexos
+Tipo: privado
+Limite por arquivo: 12 MB
+Tipos permitidos: image/jpeg, image/png, image/webp, application/pdf
 ```
 
-O R2 armazena fotos públicas dos produtos e anexos privados de pedidos e ordens de serviço.
+Não crie políticas anônimas de gravação. Os uploads passam pela API autenticada do painel.
+
+No projeto Cloudflare Pages, adicione as variáveis de produção:
+
+```text
+SUPABASE_URL=https://SEU_PROJECT_REF.supabase.co
+SUPABASE_SECRET_KEY=sb_secret_...
+SUPABASE_PUBLIC_BUCKET=universal-produtos
+SUPABASE_PRIVATE_BUCKET=universal-anexos
+```
+
+`SUPABASE_SECRET_KEY` deve ser configurada como **Secret** no Cloudflare. Use uma chave secreta de servidor criada em **Supabase → Settings → API Keys → Secret keys**. Nunca use essa chave no navegador, no GitHub, em arquivos `.env` públicos ou em mensagens.
+
+As fotos do catálogo ficam no bucket público. Croquis, PDFs e anexos de pedidos ficam no bucket privado e só são entregues pela API após autenticação no painel.
 
 ## 5. Fazer novo deploy
 
-Depois de criar os bindings `DB` e `MEDIA`, faça um novo deploy. Em seguida, acesse:
+Depois de configurar o binding `DB` e as quatro variáveis do Supabase, faça um novo deploy. Em seguida, acesse:
 
 ```text
 https://SEU-PROJETO.pages.dev/api/health
 ```
 
-A resposta deve conter `"ok": true`.
+A resposta deve conter `"ok": true` e `"storage": "supabase"`.
 
 ## 6. Criar o primeiro administrador
 
@@ -128,6 +148,8 @@ Quando o endereço começa com `painel.`, a raiz redireciona automaticamente par
 - Alterações críticas ficam registradas na auditoria.
 - Conflitos de edição simultânea são bloqueados.
 - O painel depende de internet para acessar dados e arquivos operacionais.
+- A chave secreta do Supabase fica somente nas variáveis protegidas do Cloudflare.
+- O backend limita fotos públicas a 3 MB e anexos privados a 12 MB.
 - Nunca coloque senhas, tokens ou arquivos `.env` no GitHub.
 
 ## Estrutura

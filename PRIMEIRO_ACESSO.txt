@@ -5,12 +5,14 @@ SERRALHERIA E METALÚRGICA UNIVERSAL — PRIMEIRO ACESSO
 3. Conecte o repositório ao Cloudflare Pages.
 4. Deixe o comando de build vazio e use public como diretório de saída.
 5. Crie o banco D1 e configure o binding DB.
-6. Crie o bucket R2 e configure o binding MEDIA.
-7. Faça um novo deploy.
-8. Abra /api/health e confirme que a resposta contém "ok": true.
-9. Abra /painel/ e crie o primeiro administrador.
-10. Cadastre usuários, vendedores, produtores e somente produtos reais.
-11. Valide o sistema antes de conectar o domínio definitivo.
+6. No Supabase Storage, crie o bucket público universal-produtos e o bucket privado universal-anexos.
+7. No Cloudflare Pages, configure SUPABASE_URL, SUPABASE_SECRET_KEY, SUPABASE_PUBLIC_BUCKET e SUPABASE_PRIVATE_BUCKET.
+8. Marque SUPABASE_SECRET_KEY como variável secreta e nunca a coloque no GitHub.
+9. Faça um novo deploy.
+10. Abra /api/health e confirme "ok": true e "storage": "supabase".
+11. Abra /painel/ e crie o primeiro administrador.
+12. Cadastre usuários, vendedores, produtores e somente produtos reais.
+13. Valide o sistema antes de conectar o domínio definitivo.
 
 Este pacote não possui usuário, senha, cliente, produto, orçamento ou pedido de teste.
 
