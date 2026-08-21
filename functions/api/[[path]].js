@@ -98,7 +98,8 @@ function decodeStoredBytes(value){
 async function hashPassword(password, saltB64){
   const salt = saltB64 ? decodeStoredBytes(saltB64) : crypto.getRandomValues(new Uint8Array(16));
   const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), {name:'PBKDF2'}, false, ['deriveBits']);
-  const bits = await crypto.subtle.deriveBits({name:'PBKDF2', hash:{name:'SHA-256'}, salt, iterations:120000}, key, 256);
+  // O runtime de produção do Cloudflare Workers limita PBKDF2 a 100.000 iterações.
+  const bits = await crypto.subtle.deriveBits({name:'PBKDF2', hash:{name:'SHA-256'}, salt, iterations:100000}, key, 256);
   return {salt: bytesToHex(salt), hash: bytesToHex(new Uint8Array(bits))};
 }
 async function verifyPassword(password, salt, expected){
