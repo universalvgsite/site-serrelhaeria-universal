@@ -1,0 +1,10 @@
+{
+  "name":"Universal - Painel Operacional",
+  "short_name":"Universal",
+  "start_url":"/painel/",
+  "scope":"/painel/",
+  "display":"standalone",
+  "background_color":"#f4f5f7",
+  "theme_color":"#202328",
+  "icons":[{"src":"/favicon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}

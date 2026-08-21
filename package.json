@@ -1,0 +1,11 @@
+{
+  "name": "serralheria-universal-producao",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "wrangler pages dev public --d1 DB=universal-db --r2 MEDIA=universal-media"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}
