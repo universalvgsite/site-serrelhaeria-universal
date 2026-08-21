@@ -81,18 +81,30 @@ async function sha256(input){
   const digest = await crypto.subtle.digest('SHA-256', data);
   return [...new Uint8Array(digest)].map(b=>b.toString(16).padStart(2,'0')).join('');
 }
-function toB64(bytes){ return btoa(String.fromCharCode(...bytes)); }
-function fromB64(s){ return Uint8Array.from(atob(s), c=>c.charCodeAt(0)); }
+function bytesToHex(bytes){ return Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join(''); }
+function hexToBytes(value){
+  const hex=String(value||'').trim();
+  if(!/^[0-9a-f]+$/i.test(hex) || hex.length%2!==0) throw new Error('Formato de hash inválido.');
+  const out=new Uint8Array(hex.length/2);
+  for(let i=0;i<out.length;i++) out[i]=Number.parseInt(hex.slice(i*2,i*2+2),16);
+  return out;
+}
+function legacyBase64ToBytes(value){ return Uint8Array.from(atob(value),c=>c.charCodeAt(0)); }
+function decodeStoredBytes(value){
+  const raw=String(value||'').trim();
+  return /^[0-9a-f]+$/i.test(raw) && raw.length%2===0 ? hexToBytes(raw) : legacyBase64ToBytes(raw);
+}
 
 async function hashPassword(password, saltB64){
-  const salt = saltB64 ? fromB64(saltB64) : crypto.getRandomValues(new Uint8Array(16));
-  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']);
-  const bits = await crypto.subtle.deriveBits({name:'PBKDF2', hash:'SHA-256', salt, iterations:120000}, key, 256);
-  return {salt: toB64(salt), hash: toB64(new Uint8Array(bits))};
+  const salt = saltB64 ? decodeStoredBytes(saltB64) : crypto.getRandomValues(new Uint8Array(16));
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), {name:'PBKDF2'}, false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits({name:'PBKDF2', hash:{name:'SHA-256'}, salt, iterations:120000}, key, 256);
+  return {salt: bytesToHex(salt), hash: bytesToHex(new Uint8Array(bits))};
 }
 async function verifyPassword(password, salt, expected){
   const got = await hashPassword(password, salt);
-  return timingSafeEqual(got.hash, expected);
+  const expectedBytes=decodeStoredBytes(expected);
+  return timingSafeEqual(got.hash,bytesToHex(expectedBytes));
 }
 function timingSafeEqual(a,b){
   if(a.length!==b.length) return false;
@@ -258,9 +270,14 @@ async function route(context){
     if(Number(row?.c||0)>0) return json({error:'Administrador inicial já configurado.'},409);
     const body=await req.json(); const name=String(body.name||'').trim(); const email=normalizeEmail(body.email); const password=String(body.password||'');
     if(name.length<2 || !email.includes('@') || password.length<8) return json({error:'Informe nome, e-mail e senha com pelo menos 8 caracteres.'},400);
-    const ph=await hashPassword(password); const uid=id('usr'); const t=nowISO();
-    await context.env.DB.prepare(`INSERT INTO users (id,name,email,role,password_salt,password_hash,permissions,active,must_change_password,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)`)
-      .bind(uid,name,email,'administrador',ph.salt,ph.hash,JSON.stringify({discount:true,transferProduction:true}),1,0,t,t).run();
+    let ph;
+    try{ ph=await hashPassword(password) }
+    catch(err){ console.error('Falha ao proteger a senha inicial.',err); return json({error:'Falha ao proteger a senha. Atualize a implantação e tente novamente.',code:'BOOTSTRAP_PASSWORD_HASH'},500) }
+    const uid=id('usr'); const t=nowISO();
+    try{
+      await context.env.DB.prepare(`INSERT INTO users (id,name,email,role,password_salt,password_hash,permissions,active,must_change_password,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)`)
+        .bind(uid,name,email,'administrador',ph.salt,ph.hash,JSON.stringify({discount:true,transferProduction:true}),1,0,t,t).run();
+    }catch(err){ console.error('Falha ao gravar o administrador inicial.',err); return json({error:'Falha ao gravar o administrador no banco de dados.',code:'BOOTSTRAP_DATABASE_INSERT'},500) }
     return json({ok:true});
   }
 

@@ -1,0 +1,26 @@
+ATUALIZAÇÃO 1.1.1 — CORREÇÃO DO PRIMEIRO ACESSO
+
+Problema investigado:
+- Supabase, binding D1, estrutura da tabela users, limites de CPU e gravações gerais estavam corretos.
+- A falha ficou isolada no processamento e na codificação do hash da senha durante o primeiro acesso.
+
+Correção aplicada:
+- salt e hash passam a usar codificação hexadecimal portátil;
+- parâmetros PBKDF2 usam a forma explícita do padrão Web Crypto;
+- leitura de hashes Base64 antigos foi mantida para compatibilidade;
+- erros do primeiro acesso agora identificam separadamente processamento da senha e gravação no D1.
+
+Validações realizadas:
+- criação do administrador;
+- login com a senha inicial;
+- troca de senha;
+- novo login com a senha alterada;
+- verificação de sintaxe JavaScript.
+
+Publicação:
+1. Envie o conteúdo desta pasta para a raiz do repositório GitHub, substituindo os arquivos existentes.
+2. Aguarde o novo deploy da Cloudflare Pages.
+3. Atualize /painel/ com Ctrl + F5.
+4. Crie o administrador pelo formulário Primeiro acesso.
+
+Não é necessário alterar as variáveis do Supabase nem o binding DB.
