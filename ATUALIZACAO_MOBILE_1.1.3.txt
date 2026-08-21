@@ -1,0 +1,25 @@
+ATUALIZAÇÃO 1.1.3 — NOVA NAVEGAÇÃO NO CELULAR
+
+Problema corrigido:
+- no celular, os módulos apareciam como uma fileira de símbolos pequenos;
+- os símbolos não explicavam a função e exigiam rolagem horizontal;
+- era fácil entrar na área errada.
+
+Nova navegação:
+- a tela Início agora reúne os módulos em cartões grandes;
+- cada cartão tem ícone, nome e descrição da função;
+- os módulos estão organizados em Operação, Cadastros e Gestão;
+- cada usuário vê somente as áreas permitidas para o seu perfil;
+- dentro de qualquer módulo, o topo mostra apenas o botão Início;
+- as ações de conta, backup e novo orçamento ficam concentradas na Home;
+- o menu lateral completo do computador foi preservado.
+
+Compatibilidade:
+- nenhuma regra de orçamento, pedido, OS, produção, entrega ou estoque foi alterada;
+- nenhuma configuração do Supabase ou do banco D1 precisa ser refeita;
+- o cache do aplicativo foi atualizado para a versão 12.
+
+Publicação:
+1. Envie o conteúdo desta pasta para a raiz do repositório GitHub, substituindo os arquivos existentes.
+2. Aguarde o deploy automático da Cloudflare Pages.
+3. No celular, feche e abra novamente o aplicativo. Se necessário, atualize /painel/ uma vez no navegador.

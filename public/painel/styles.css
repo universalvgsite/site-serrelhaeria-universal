@@ -31,3 +31,47 @@ button,input,select,textarea{font:inherit}.app-shell{min-height:100vh;display:gr
 
 @media(max-width:900px){.workflow-strip{justify-content:flex-start;overflow-x:auto}.workflow-step{flex:0 0 auto}}
 @media print{.workflow-strip{display:none!important}}
+
+/* Navegação mobile v12: a Home concentra os módulos e o topo mantém só o retorno ao início. */
+.mobile-only,.mobile-home-menu{display:none!important}
+
+@media(max-width:720px){
+  body{background:#f2f4f7}
+  .app-shell{display:block}
+  .sidebar{height:auto;min-height:62px;position:sticky;top:0;z-index:40;padding:9px 16px;overflow:visible;display:flex;align-items:center;background:linear-gradient(105deg,#17191d,#282c32);box-shadow:0 5px 18px rgba(17,24,39,.18)}
+  .sidebar .brand,.sidebar .sidebar-foot{display:none!important}
+  .sidebar nav{display:block;width:100%;padding:0}
+  .sidebar .nav-btn{display:none}
+  .sidebar .home-nav-btn:not(.hidden){display:inline-flex;width:auto;min-width:0;align-items:center;justify-content:center;gap:8px;padding:10px 15px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.07);color:#fff;border-radius:12px;font-size:15px;font-weight:800;letter-spacing:.01em}
+  .sidebar .home-nav-btn span{display:inline!important}
+  .sidebar .home-nav-btn:hover,.sidebar .home-nav-btn.active{background:#fff;color:#202328;border-color:#fff}
+
+  .topbar{padding:20px 16px 14px;gap:14px}
+  .topbar h1{font-size:27px;line-height:1.08}
+  .topbar p{font-size:14px;line-height:1.45}
+  body:not(.panel-home) .top-actions{display:none}
+  body.panel-home .top-actions{display:flex}
+  .top-actions{gap:9px}
+  .top-actions .user-chip{flex:1 0 100%}
+  .top-actions .btn{min-height:48px}
+  .mobile-only{display:inline-flex!important}
+
+  .mobile-home-menu{display:block!important;margin-bottom:22px}
+  .mobile-home-intro{position:relative;overflow:hidden;padding:21px 20px;border-radius:18px;background:linear-gradient(135deg,#202328 0%,#2f343b 70%,#17191d 100%);color:#fff;box-shadow:0 12px 28px rgba(23,25,29,.18)}
+  .mobile-home-intro::after{content:"";position:absolute;width:140px;height:140px;right:-52px;top:-68px;border:22px solid rgba(184,138,58,.2);border-radius:50%}
+  .mobile-home-eyebrow{position:relative;z-index:1;display:block;margin-bottom:6px;color:#d5b16c;font-size:10px;font-weight:900;letter-spacing:.16em;text-transform:uppercase}
+  .mobile-home-intro h2{position:relative;z-index:1;margin:0;font-size:22px;line-height:1.15}
+  .mobile-home-intro p{position:relative;z-index:1;margin:7px 0 0;color:#cfd4dc;font-size:13px;line-height:1.45}
+  .mobile-menu-group{margin-top:22px}
+  .mobile-menu-group h3{margin:0 0 10px 3px;color:#6b7280;font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase}
+  .mobile-menu-grid{display:grid;grid-template-columns:1fr;gap:10px}
+  .mobile-module-card{width:100%;min-height:86px;display:grid;grid-template-columns:54px minmax(0,1fr) 22px;gap:13px;align-items:center;padding:14px;border:1px solid #dfe3e8;border-radius:16px;background:#fff;color:#202328;text-align:left;cursor:pointer;box-shadow:0 3px 12px rgba(17,24,39,.05);transition:transform .15s ease,border-color .15s ease,box-shadow .15s ease}
+  .mobile-module-card:active{transform:scale(.985)}
+  .mobile-module-card:focus-visible{outline:3px solid rgba(184,138,58,.3);outline-offset:2px}
+  .mobile-module-icon{width:54px;height:54px;display:grid;place-items:center;border-radius:14px;background:#202328;color:#d8b46d}
+  .mobile-module-icon svg{width:27px;height:27px;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;fill:none}
+  .mobile-module-copy{min-width:0;display:grid;gap:4px}
+  .mobile-module-copy strong{font-size:16px;line-height:1.2}
+  .mobile-module-copy small{color:#68707c;font-size:12px;line-height:1.35}
+  .mobile-module-arrow{color:#a3a9b2;font-size:27px;line-height:1;text-align:right}
+}

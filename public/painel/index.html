@@ -8,7 +8,7 @@
   <title>Universal | Painel Operacional</title>
   <link rel="manifest" href="/painel/manifest.webmanifest">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/painel/styles.css?v=11">
+  <link rel="stylesheet" href="/painel/styles.css?v=12">
 </head>
 <body>
   <section id="authScreen" class="login-screen">
@@ -34,8 +34,8 @@
   <div id="appShell" class="app-shell hidden">
     <aside class="sidebar">
       <div class="brand panel-logo-brand"><img class="panel-logo" src="/universal-logo.png" alt="Serralheria e Metalúrgica Universal"></div>
-      <nav id="nav">
-        <button class="nav-btn active" data-view="dashboard">▦ <span>Visão geral</span></button>
+      <nav id="nav" aria-label="Navegação principal">
+        <button class="nav-btn active home-nav-btn" data-view="dashboard" aria-label="Ir para o início">⌂ <span>Início</span></button>
         <button class="nav-btn" data-view="orcamentos">▤ <span>Orçamentos</span></button>
         <button class="nav-btn" data-view="pedidos">▣ <span>Pedidos</span></button>
         <button class="nav-btn" data-view="producao">⚒ <span>Produção</span></button>
@@ -62,6 +62,7 @@
           <button class="btn ghost" id="backupBtn">Exportar backup</button>
           <label class="btn ghost admin-manager file-btn">Importar backup<input id="restoreInput" type="file" accept="application/json" hidden></label>
           <button class="btn primary can-budget" id="quickBudgetBtn">+ Novo orçamento</button>
+          <button class="btn ghost mobile-only" id="mobileLogoutBtn">Sair</button>
         </div>
       </header>
       <section id="view-dashboard" class="view active"></section>
@@ -83,9 +84,9 @@
 
   <dialog id="modal" class="modal"><div id="modalContent"></div></dialog>
   <div id="toast" class="toast"></div>
-  <script src="/painel/app.js?v=11" defer></script>
-  <script src="/painel/workflow.js?v=11" defer></script>
-  <script src="/painel/delivery.js?v=11" defer></script>
-  <script src="/painel/init.js?v=11" defer></script>
+  <script src="/painel/app.js?v=12" defer></script>
+  <script src="/painel/workflow.js?v=12" defer></script>
+  <script src="/painel/delivery.js?v=12" defer></script>
+  <script src="/painel/init.js?v=12" defer></script>
 </body>
 </html>

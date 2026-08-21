@@ -1,0 +1,29 @@
+ATUALIZAÇÃO 1.1.2 — CORREÇÃO DEFINITIVA DO PRIMEIRO ACESSO
+
+Causa confirmada:
+- o cadastro do administrador usa PBKDF2-SHA-256 para proteger a senha;
+- a versão anterior solicitava 120.000 iterações;
+- o runtime de produção do Cloudflare Workers aceita no máximo 100.000 iterações de PBKDF2;
+- por isso a proteção da senha falhava antes da gravação do usuário no banco.
+
+Correção aplicada:
+- PBKDF2 ajustado para 100.000 iterações, o máximo aceito pelo Cloudflare;
+- salt individual aleatório de 16 bytes mantido;
+- hash de 256 bits e codificação hexadecimal portátil mantidos;
+- leitura de hashes Base64 antigos mantida para compatibilidade;
+- mensagens específicas do primeiro acesso mantidas para facilitar diagnóstico.
+
+Validações realizadas:
+- criação do administrador;
+- login com a senha inicial;
+- troca obrigatória de senha;
+- novo login com a senha alterada;
+- verificação de sintaxe JavaScript.
+
+Publicação:
+1. Envie o conteúdo desta pasta para a raiz do repositório GitHub, substituindo os arquivos existentes.
+2. Aguarde o novo deploy da Cloudflare Pages.
+3. Atualize /painel/ com Ctrl + F5.
+4. Crie o administrador pelo formulário Primeiro acesso.
+
+Não é necessário alterar o Supabase, os buckets nem o binding DB.
