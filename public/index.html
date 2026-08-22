@@ -7,7 +7,7 @@
   <meta name="description" content="Serralheria e Metalúrgica Universal em Várzea Grande. Portões, portas, lixeiras e estruturas metálicas sob medida.">
   <title>Serralheria e Metalúrgica Universal</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/styles.css?v=10">
+  <link rel="stylesheet" href="/styles.css?v=16">
 </head>
 <body>
   <div class="topline"><div class="wrap"><span><strong>SERRALHERIA E METALÚRGICA UNIVERSAL</strong> · Trabalho de qualidade!</span><span id="topPhone">WhatsApp: (65) 3684-4696</span></div></div>
@@ -18,7 +18,7 @@
       </a>
       <button class="mobileBtn" id="mobileBtn" aria-label="Abrir menu">☰</button>
       <nav class="menu" id="menu">
-        <a href="#inicio">Início</a><a href="#catalogo">Portões, portas e lixeiras</a><a href="#sob-medida">Sob medida</a><a href="/estruturas">Estruturas</a><a href="#contato">Contato</a>
+        <a href="#inicio">Início</a><a id="catalogMenuLink" href="#catalogo" hidden>Portões, portas e lixeiras</a><a href="#sob-medida">Sob medida</a><a href="/estruturas">Estruturas</a><a href="#contato">Contato</a>
       </nav>
     </div>
   </header>
@@ -31,7 +31,7 @@
           <h1>Portões prontos <em>e sob medida</em></h1>
           <p>Escolha o modelo, confira a medida padrão e fale com a Universal pelo WhatsApp. Para projetos personalizados, o vendedor finaliza o orçamento conforme a medida desejada.</p>
           <div class="heroBtns">
-            <a class="cta" href="#catalogo">Ver modelos</a>
+            <a class="cta wa-generic" id="catalogCta" href="#">Solicitar orçamento</a>
             <a class="ghost wa-generic" href="#">Falar no WhatsApp</a>
           </div>
           <div class="heroInfo"><span><b>Portão padrão:</b> 3,10 × 2,10 m</span><span><b>Porta padrão:</b> 0,80 × 2,10 m</span><span><b>Várzea Grande:</b> frete grátis</span><span><b>Cuiabá:</b> R$ 100</span></div>
@@ -44,15 +44,15 @@
       <div class="wrap badgeGrid">
         <div class="badge"><div class="badgeIcon">◆</div><div><b>Fabricação própria</b><small>Produção da Universal</small></div></div>
         <div class="badge"><div class="badgeIcon">↔</div><div><b>Medida padrão</b><small>Ou solicite personalizada</small></div></div>
-        <div class="badge"><div class="badgeIcon">▣</div><div><b>Catálogo atualizado</b><small>Produtos cadastrados pela equipe</small></div></div>
+        <div class="badge"><div class="badgeIcon">▣</div><div><b>Modelos para seu projeto</b><small>Portões, portas e lixeiras</small></div></div>
         <div class="badge"><div class="badgeIcon">✓</div><div><b>Compra orientada</b><small>Atendimento pelo WhatsApp</small></div></div>
       </div>
     </section>
 
-    <section class="section" id="catalogo">
+    <section class="section" id="catalogo" hidden>
       <div class="wrap">
         <div class="eyebrow">CATÁLOGO UNIVERSAL</div>
-        <div class="titleRow"><h2>Escolha seu modelo</h2><p>Os produtos publicados pela equipe aparecem aqui automaticamente. Preço, medida, disponibilidade e fotos são controlados no painel.</p></div>
+        <div class="titleRow"><h2>Escolha seu modelo</h2><p>Confira as opções disponíveis e fale com a Universal para solicitar seu orçamento.</p></div>
         <div class="filterBar">
           <button class="filter active" data-cat="">Todos</button><button class="filter" data-cat="Portão">Portões</button><button class="filter" data-cat="Porta">Portas</button><button class="filter" data-cat="Lixeira">Lixeiras</button>
         </div>
@@ -67,12 +67,12 @@
     </div></section>
 
     <section class="section soft" id="como-comprar"><div class="wrap">
-      <div class="eyebrow">PROCESSO SIMPLES</div><div class="titleRow"><h2>Como funciona</h2><p>A negociação e o pagamento são finalizados diretamente com a equipe da Universal.</p></div>
+      <div class="eyebrow">PROCESSO SIMPLES</div><div class="titleRow"><h2>Como funciona</h2><p>Atendimento direto pelo WhatsApp, com orçamento conforme o modelo e a medida desejada.</p></div>
       <div class="steps">
-        <div class="step"><div class="stepNum">1</div><h3>Escolha o modelo</h3><p>Veja os produtos ativos, fotos, preço e características.</p></div>
-        <div class="step"><div class="stepNum">2</div><h3>Confira a medida</h3><p>Use a medida padrão ou solicite uma medida personalizada.</p></div>
+        <div class="step"><div class="stepNum">1</div><h3>Escolha a solução</h3><p>Portão, porta, lixeira ou estrutura metálica para seu projeto.</p></div>
+        <div class="step"><div class="stepNum">2</div><h3>Informe a medida</h3><p>Use a medida padrão ou solicite uma fabricação personalizada.</p></div>
         <div class="step"><div class="stepNum">3</div><h3>Fale no WhatsApp</h3><p>A mensagem já leva o modelo escolhido para o atendimento.</p></div>
-        <div class="step"><div class="stepNum">4</div><h3>Confirme o pedido</h3><p>A equipe confirma condições, prazo, entrega e pagamento.</p></div>
+        <div class="step"><div class="stepNum">4</div><h3>Confirme o pedido</h3><p>Receba as condições, o prazo, a entrega e as formas de pagamento.</p></div>
       </div>
     </div></section>
 
@@ -81,16 +81,16 @@
       <article class="panel" id="estruturas"><div class="panelContent"><div class="eyebrow light">PROJETOS MAIORES</div><h3>Estruturas metálicas e serralheria sob projeto</h3><p>Barracões, coberturas, estruturas e outros serviços seguem por orçamento personalizado.</p><a class="cta" href="/estruturas">Conhecer estruturas</a></div><div class="structureArt"><i></i><i></i><i></i><i></i></div></article>
     </div></section>
 
-    <section class="contact" id="contato"><div class="wrap"><div><h2>Encontrou o produto ideal?</h2><p>Fale diretamente com a Universal e continue o atendimento.</p></div><a class="cta dark wa-generic" href="#">Abrir WhatsApp</a></div></section>
+    <section class="contact" id="contato"><div class="wrap"><div><h2>Precisa de um portão, porta ou estrutura?</h2><p>Fale diretamente com a Universal e solicite seu orçamento.</p></div><a class="cta dark wa-generic" href="#">Abrir WhatsApp</a></div></section>
   </main>
 
   <footer><div class="wrap"><div class="footerGrid">
     <div><div class="brand footBrand"><img class="site-logo" src="/universal-logo.png" alt="Serralheria e Metalúrgica Universal" loading="lazy"></div><p>Portões, portas, lixeiras e estruturas metálicas somente sob medida.</p></div>
     <div><h4>Entrega</h4><p>Várzea Grande: grátis</p><p>Cuiabá: R$ 100,00</p><p>Outras cidades: sob consulta</p></div>
     <div><h4>Importante</h4><p>Instalação não inclusa.</p><p>Automatização não inclusa.</p><p id="footerPhone">WhatsApp: (65) 3684-4696</p></div>
-  </div><div class="legal"><span>© <span id="year"></span> Serralheria e Metalúrgica Universal</span><span>Catálogo conectado ao painel operacional.</span></div></div></footer>
+  </div><div class="legal"><span>© <span id="year"></span> Serralheria e Metalúrgica Universal</span><span>Fabricação própria em Várzea Grande - MT.</span></div></div></footer>
 
   <dialog id="productModal" class="modal"><div class="modalBox"><button class="close" id="closeModal" aria-label="Fechar">×</button><div id="modalBody"></div></div></dialog>
-  <script src="/app.js?v=10" defer></script>
+  <script src="/app.js?v=16" defer></script>
 </body>
 </html>
