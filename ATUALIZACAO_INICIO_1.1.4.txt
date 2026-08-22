@@ -1,0 +1,14 @@
+ATUALIZAÇÃO 1.1.4 — CORREÇÃO DO BOTÃO INÍCIO
+
+Problema corrigido:
+- em alguns celulares, tocar em Início não retornava à Home;
+- o botão dependia somente do comando interno do JavaScript;
+- uma versão anterior mantida em cache podia impedir a troca de tela.
+
+Correção aplicada:
+- Início agora também aponta diretamente para /painel/;
+- com o JavaScript atualizado, a troca continua instantânea e sem recarregar;
+- se o celular estiver com código antigo em cache, o link direto recarrega a Home;
+- cache do aplicativo atualizado para a versão 13.
+
+Não é necessário alterar Supabase, banco D1, usuários ou cadastros.

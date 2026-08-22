@@ -33,6 +33,7 @@ button,input,select,textarea{font:inherit}.app-shell{min-height:100vh;display:gr
 @media print{.workflow-strip{display:none!important}}
 
 /* Navegação mobile v12: a Home concentra os módulos e o topo mantém só o retorno ao início. */
+.nav-btn{text-decoration:none}
 .mobile-only,.mobile-home-menu{display:none!important}
 
 @media(max-width:720px){
