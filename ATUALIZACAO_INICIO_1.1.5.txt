@@ -1,0 +1,15 @@
+ATUALIZAÇÃO 1.1.5 — LINK INÍCIO SEM INTERFERÊNCIA DO JAVASCRIPT
+
+Causa confirmada na versão 1.1.4:
+- o botão Início já era um link para /painel/;
+- porém o app.js ainda chamava preventDefault() nesse link;
+- o preventDefault() cancelava a navegação direta e mantinha a dependência do comando interno.
+
+Correção:
+- o link Início foi removido totalmente do controlador JavaScript;
+- tocar em Início agora sempre abre /painel/?home=1&v=14;
+- nenhum evento do aplicativo pode cancelar essa navegação;
+- a rota possui identificador novo para evitar reutilização da página antiga em cache;
+- cache do aplicativo atualizado para universal-shell-v14.
+
+Supabase, banco D1, usuários e dados operacionais não foram alterados.
