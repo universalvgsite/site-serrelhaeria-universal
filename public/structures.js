@@ -14,4 +14,5 @@
   if(mobile&&menu)mobile.addEventListener('click',()=>menu.classList.toggle('open'));
   document.querySelectorAll('#menu a').forEach(link=>link.addEventListener('click',()=>menu?.classList.remove('open')));
   const year=document.querySelector('#year');if(year)year.textContent=String(new Date().getFullYear());
+  try{fetch('/api/track',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({eventType:'page_view',page:location.href,referrer:document.referrer})})}catch{}
 })();

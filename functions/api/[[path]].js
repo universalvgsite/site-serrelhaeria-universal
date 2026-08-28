@@ -6,7 +6,7 @@ const DEFAULT_STATE = {
     nome: 'Metalúrgica e Serralheria Universal',
     razaoSocial: 'Serralheria Universal R. do Vale Pedrosa & Cia LTDA',
     cnpj: '09.360.662/0001-47',
-    telefone: '(65) 3684-4041',
+    telefone: '(65) 3684-4696',
     whatsapp: '556536844696',
     endereco: 'Av. Sen. Filinto Müller, 3223 - Jardim Paula II, Várzea Grande - MT, 78135-181',
     logoUrl: '/universal-logo.png',
@@ -29,20 +29,24 @@ const DEFAULT_STATE = {
   auditoria: []
 };
 
+// O painel atual é restrito ao catálogo. Os perfis antigos continuam aceitos
+// para preservar os usuários do D1, mas passam a operar como Cadastrador.
 const ROLE_COLLECTIONS = {
-  administrador: ['empresa','clientes','vendedores','produtores','produtos','estoqueMateriais','movimentosEstoque','orcamentos','pedidos'],
-  gerente: ['empresa','clientes','vendedores','produtores','produtos','estoqueMateriais','movimentosEstoque','orcamentos','pedidos'],
-  vendedor: ['clientes','orcamentos','pedidos'],
-  conferencia: ['pedidos','estoqueMateriais','movimentosEstoque'],
-  entrega: ['pedidos']
+  administrador: ['produtos'],
+  cadastrador: ['produtos'],
+  gerente: ['produtos'],
+  vendedor: ['produtos'],
+  conferencia: ['produtos'],
+  entrega: ['produtos']
 };
 
 const ROLE_READ_COLLECTIONS = {
-  administrador: ['empresa','clientes','vendedores','produtores','produtos','estoqueMateriais','movimentosEstoque','orcamentos','pedidos','auditoria'],
-  gerente: ['empresa','clientes','vendedores','produtores','produtos','estoqueMateriais','movimentosEstoque','orcamentos','pedidos','auditoria'],
-  vendedor: ['empresa','clientes','vendedores','produtores','produtos','estoqueMateriais','orcamentos','pedidos'],
-  conferencia: ['empresa','clientes','vendedores','produtores','produtos','estoqueMateriais','movimentosEstoque','pedidos'],
-  entrega: ['empresa','clientes','vendedores','produtores','produtos','pedidos']
+  administrador: ['empresa','produtos'],
+  cadastrador: ['empresa','produtos'],
+  gerente: ['empresa','produtos'],
+  vendedor: ['empresa','produtos'],
+  conferencia: ['empresa','produtos'],
+  entrega: ['empresa','produtos']
 };
 
 const json = (data, status=200, extra={}) => new Response(JSON.stringify(data), {
@@ -55,6 +59,40 @@ function clone(v){ return JSON.parse(JSON.stringify(v)); }
 function safeParse(s, fallback){ try{return JSON.parse(s)}catch{return fallback} }
 function normalizeEmail(v=''){ return String(v).trim().toLowerCase(); }
 function id(prefix='id'){ return `${prefix}_${Date.now().toString(36)}_${crypto.randomUUID().slice(0,8)}`; }
+function panelRole(role){ return role==='administrador'?'administrador':'cadastrador'; }
+function normalizeProduct(product={},index=0){
+  const allowedCategories=['Portão','Porta','Lixeira'];
+  const category=allowedCategories.includes(product.categoria)?product.categoria:'Portão';
+  const promotion=Boolean(product.promocaoAtiva);
+  return {
+    ...product,
+    categoria:category,
+    codigo:String(product.codigo||'').trim(),
+    descricaoPublica:String(product.descricaoPublica||product.descricao||'').trim(),
+    preco:product.preco==null||product.preco===''?'':Number(product.preco)||0,
+    promocaoAtiva:promotion,
+    precoPromocional:product.precoPromocional==null||product.precoPromocional===''?'':Number(product.precoPromocional)||0,
+    freteGratisCuiaba:Boolean(promotion&&product.freteGratisCuiaba),
+    siteAtivo:product.siteAtivo!==false,
+    ordem:Number(product.ordem)||index+1
+  };
+}
+function allocateProductCodes(products,previousProducts=[]){
+  const prefixes={'Portão':'POR','Porta':'PTA','Lixeira':'LIX'};
+  const previousById=new Map(previousProducts.map(product=>[product.id,product]));
+  const counters={POR:0,PTA:0,LIX:0};
+  for(const product of previousProducts){
+    const match=String(product.codigo||'').match(/^(POR|PTA|LIX)-(\d+)$/i);
+    if(match)counters[match[1].toUpperCase()]=Math.max(counters[match[1].toUpperCase()],Number(match[2])||0);
+  }
+  return products.map(product=>{
+    const previous=previousById.get(product.id);
+    if(previous?.codigo)return {...product,categoria:previous.categoria||product.categoria,codigo:previous.codigo};
+    const prefix=prefixes[product.categoria]||'POR';
+    counters[prefix]+=1;
+    return {...product,codigo:`${prefix}-${String(counters[prefix]).padStart(4,'0')}`};
+  });
+}
 
 function storageConfig(context){
   const baseUrl=String(context.env.SUPABASE_URL||'').trim().replace(/\/+$/,'');
@@ -145,7 +183,7 @@ async function getStateRecord(DB){
     clientes:Array.isArray(raw.clientes)?raw.clientes:[],
     vendedores:Array.isArray(raw.vendedores)?raw.vendedores:[],
     produtores:Array.isArray(raw.produtores)?raw.produtores:[],
-    produtos:Array.isArray(raw.produtos)?raw.produtos:[],
+    produtos:Array.isArray(raw.produtos)?raw.produtos.map(normalizeProduct):[],
     estoqueMateriais:Array.isArray(raw.estoqueMateriais)?raw.estoqueMateriais:[],
     movimentosEstoque:Array.isArray(raw.movimentosEstoque)?raw.movimentosEstoque:[],
     orcamentos:Array.isArray(raw.orcamentos)?raw.orcamentos:[],
@@ -159,9 +197,8 @@ function visibleState(state,user){
   const keys=ROLE_READ_COLLECTIONS[user?.role]||[];
   const out={};
   for(const key of keys) out[key]=clone(state[key]);
-  // Mantém arrays esperados pela interface sem expor coleções restritas.
-  for(const key of ['clientes','vendedores','produtores','produtos','estoqueMateriais','movimentosEstoque','orcamentos','pedidos','auditoria']) if(!Object.prototype.hasOwnProperty.call(out,key)) out[key]=[];
   if(!out.empresa) out.empresa=clone(DEFAULT_STATE.empresa);
+  if(!out.produtos) out.produtos=[];
   return out;
 }
 
@@ -182,8 +219,7 @@ async function getSession(context){
   };
 }
 
-function publicUser(u){ return {id:u.id,name:u.name,email:u.email,role:u.role,permissions:u.permissions||{},mustChangePassword:Boolean(u.mustChangePassword)}; }
-function hasPermission(user, key){ return user?.role==='administrador' || Boolean(user?.permissions?.[key]); }
+function publicUser(u){ return {id:u.id,name:u.name,email:u.email,role:panelRole(u.role),permissions:{},mustChangePassword:Boolean(u.mustChangePassword)}; }
 function requireAuth(user){ if(!user) return json({error:'Não autenticado.'},401); if(user.mustChangePassword) return json({error:'Troque sua senha para continuar.',code:'PASSWORD_CHANGE_REQUIRED'},403); return null; }
 
 function getClientIp(req){
@@ -198,25 +234,6 @@ function findEntity(collection, entityId){
   return collection;
 }
 
-function orderProducerChanges(beforeOrders, afterOrders){
-  const map=new Map((beforeOrders||[]).map(x=>[x.id,x]));
-  return (afterOrders||[]).filter(n=>{const o=map.get(n.id); return o && (o.produtorId||'') !== (n.produtorId||'');});
-}
-
-function quoteDiscountChanged(beforeQuotes, afterQuotes){
-  const map=new Map((beforeQuotes||[]).map(x=>[x.id,x]));
-  for(const n of afterQuotes||[]){
-    const o=map.get(n.id);
-    const hasDisc=(q)=>Number(q?.descontoGeral||0)>0 || (q?.itens||[]).some(i=>Number(i?.desconto||0)>0);
-    if(!o && hasDisc(n)) return true;
-    if(o){
-      const sig=q=>JSON.stringify({dg:q.descontoGeral,dt:q.descontoGeralTipo,it:(q.itens||[]).map(i=>[i.id,i.desconto,i.descontoTipo])});
-      if(sig(o)!==sig(n) && hasDisc(n)) return true;
-    }
-  }
-  return false;
-}
-
 async function saveState(context, user, incoming, auditMeta={}, expectedVersion=''){
   const rec = await getStateRecord(context.env.DB);
   const before = rec.state;
@@ -226,14 +243,7 @@ async function saveState(context, user, incoming, auditMeta={}, expectedVersion=
   const allowed = ROLE_COLLECTIONS[user.role]||[];
   const merged = clone(before);
   for(const key of allowed){ if(Object.prototype.hasOwnProperty.call(incoming,key)) merged[key]=incoming[key]; }
-
-  if(user.role==='vendedor' && quoteDiscountChanged(before.orcamentos, merged.orcamentos) && !hasPermission(user,'discount')){
-    throw new Response(JSON.stringify({error:'Seu usuário não tem permissão para conceder desconto.'}),{status:403,headers:{'content-type':'application/json'}});
-  }
-  const transferred=orderProducerChanges(before.pedidos, merged.pedidos);
-  if(transferred.length && !hasPermission(user,'transferProduction')){
-    throw new Response(JSON.stringify({error:'Seu usuário não tem permissão para transferir responsável da produção.'}),{status:403,headers:{'content-type':'application/json'}});
-  }
+  merged.produtos=allocateProductCodes((Array.isArray(merged.produtos)?merged.produtos:[]).map(normalizeProduct),before.produtos||[]);
 
   const col=auditMeta.collection;
   const entityId=auditMeta.entityId;
@@ -277,7 +287,7 @@ async function route(context){
     const uid=id('usr'); const t=nowISO();
     try{
       await context.env.DB.prepare(`INSERT INTO users (id,name,email,role,password_salt,password_hash,permissions,active,must_change_password,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)`)
-        .bind(uid,name,email,'administrador',ph.salt,ph.hash,JSON.stringify({discount:true,transferProduction:true}),1,0,t,t).run();
+        .bind(uid,name,email,'administrador',ph.salt,ph.hash,'{}',1,0,t,t).run();
     }catch(err){ console.error('Falha ao gravar o administrador inicial.',err); return json({error:'Falha ao gravar o administrador no banco de dados.',code:'BOOTSTRAP_DATABASE_INSERT'},500) }
     return json({ok:true});
   }
@@ -290,7 +300,7 @@ async function route(context){
     await context.env.DB.prepare(`INSERT INTO sessions (token_hash,user_id,expires_at,created_at,user_agent,ip_hint) VALUES (?,?,?,?,?,?)`)
       .bind(tokenHash,row.id,expires,nowISO(),(req.headers.get('user-agent')||'').slice(0,180),getClientIp(req)).run();
     const cookie=`universal_session=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${SESSION_DAYS*86400}`;
-    return json({ok:true,user:{id:row.id,name:row.name,email:row.email,role:row.role,permissions:safeParse(row.permissions,{}),mustChangePassword:Boolean(row.must_change_password)}},200,{'set-cookie':cookie});
+    return json({ok:true,user:publicUser({id:row.id,name:row.name,email:row.email,role:row.role,mustChangePassword:Boolean(row.must_change_password)})},200,{'set-cookie':cookie});
   }
   if(path==='logout' && method==='POST'){
     if(user) await context.env.DB.prepare(`DELETE FROM sessions WHERE token_hash=?`).bind(user.tokenHash).run();
@@ -358,6 +368,14 @@ async function route(context){
     } catch(e){ if(e instanceof Response) return e; throw e; }
   }
 
+  if(path==='metrics' && method==='GET'){
+    const [views,whatsapp]=await Promise.all([
+      context.env.DB.prepare(`SELECT COUNT(*) total FROM tracking_events WHERE event_type='page_view'`).first(),
+      context.env.DB.prepare(`SELECT COUNT(*) total FROM tracking_events WHERE event_type='whatsapp_click'`).first()
+    ]);
+    return json({visits:Number(views?.total||0),whatsappClicks:Number(whatsapp?.total||0)});
+  }
+
   if(path==='upload' && method==='POST'){
     const config=storageConfig(context);
     if(!config) return json({error:'Supabase Storage não configurado no Cloudflare.'},503);
@@ -386,14 +404,14 @@ async function route(context){
   if(path==='users' && method==='GET'){
     if(user.role!=='administrador') return json({error:'Acesso restrito ao administrador.'},403);
     const rs=await context.env.DB.prepare(`SELECT id,name,email,role,permissions,active,must_change_password,created_at,updated_at FROM users ORDER BY name`).all();
-    return json({users:(rs.results||[]).map(r=>({...r,permissions:safeParse(r.permissions,{}),active:Boolean(r.active),mustChangePassword:Boolean(r.must_change_password)}))});
+    return json({users:(rs.results||[]).map(r=>({id:r.id,name:r.name,email:r.email,role:panelRole(r.role),active:Boolean(r.active),mustChangePassword:Boolean(r.must_change_password),createdAt:r.created_at,updatedAt:r.updated_at}))});
   }
   if(path==='users' && method==='POST'){
     if(user.role!=='administrador') return json({error:'Acesso restrito ao administrador.'},403);
-    const b=await req.json(); const name=String(b.name||'').trim(), email=normalizeEmail(b.email), role=String(b.role||'vendedor'), password=String(b.password||'');
+    const b=await req.json(); const name=String(b.name||'').trim(), email=normalizeEmail(b.email), role=String(b.role||'cadastrador'), password=String(b.password||'');
     if(name.length<2||!email.includes('@')||password.length<8) return json({error:'Dados inválidos. A senha temporária precisa ter 8 caracteres ou mais.'},400);
-    if(!ROLE_COLLECTIONS[role]) return json({error:'Perfil inválido.'},400);
-    const ph=await hashPassword(password), uid=id('usr'), t=nowISO(), perms={discount:Boolean(b.permissions?.discount),transferProduction:Boolean(b.permissions?.transferProduction)};
+    if(!['administrador','cadastrador'].includes(role)) return json({error:'Perfil inválido.'},400);
+    const ph=await hashPassword(password), uid=id('usr'), t=nowISO(), perms={};
     try{
       await context.env.DB.prepare(`INSERT INTO users (id,name,email,role,password_salt,password_hash,permissions,active,must_change_password,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)`).bind(uid,name,email,role,ph.salt,ph.hash,JSON.stringify(perms),1,1,t,t).run();
     }catch{return json({error:'Já existe um usuário com esse e-mail.'},409)}
@@ -401,10 +419,18 @@ async function route(context){
   }
   if(seg[0]==='users' && seg[1] && method==='PUT'){
     if(user.role!=='administrador') return json({error:'Acesso restrito ao administrador.'},403);
-    const uid=seg[1]; const b=await req.json(); const role=String(b.role||'vendedor'); if(!ROLE_COLLECTIONS[role]) return json({error:'Perfil inválido.'},400);
-    const perms={discount:Boolean(b.permissions?.discount),transferProduction:Boolean(b.permissions?.transferProduction)};
-    await context.env.DB.prepare(`UPDATE users SET name=?,role=?,permissions=?,active=?,updated_at=? WHERE id=?`).bind(String(b.name||'').trim(),role,JSON.stringify(perms),b.active===false?0:1,nowISO(),uid).run();
-    if(b.active===false) await context.env.DB.prepare(`DELETE FROM sessions WHERE user_id=?`).bind(uid).run();
+    const uid=seg[1]; const b=await req.json(); const role=String(b.role||'cadastrador');
+    if(!['administrador','cadastrador'].includes(role)) return json({error:'Perfil inválido.'},400);
+    const target=await context.env.DB.prepare(`SELECT id,role,active FROM users WHERE id=?`).bind(uid).first();
+    if(!target) return json({error:'Usuário não encontrado.'},404);
+    const active=b.active!==false;
+    if(uid===user.id&&!active) return json({error:'Você não pode desativar o próprio acesso.'},400);
+    if(target.role==='administrador'&&target.active&&(role!=='administrador'||!active)){
+      const admins=await context.env.DB.prepare(`SELECT COUNT(*) total FROM users WHERE role='administrador' AND active=1`).first();
+      if(Number(admins?.total||0)<=1) return json({error:'Mantenha pelo menos um administrador ativo.'},400);
+    }
+    await context.env.DB.prepare(`UPDATE users SET name=?,role=?,permissions=?,active=?,updated_at=? WHERE id=?`).bind(String(b.name||'').trim(),role,'{}',active?1:0,nowISO(),uid).run();
+    if(!active) await context.env.DB.prepare(`DELETE FROM sessions WHERE user_id=?`).bind(uid).run();
     return json({ok:true});
   }
   if(seg[0]==='users' && seg[1] && seg[2]==='reset-password' && method==='POST'){
@@ -412,13 +438,6 @@ async function route(context){
     const b=await req.json(); const password=String(b.password||''); if(password.length<8) return json({error:'Senha temporária precisa ter pelo menos 8 caracteres.'},400);
     const ph=await hashPassword(password); await context.env.DB.prepare(`UPDATE users SET password_salt=?,password_hash=?,must_change_password=1,updated_at=? WHERE id=?`).bind(ph.salt,ph.hash,nowISO(),seg[1]).run();
     await context.env.DB.prepare(`DELETE FROM sessions WHERE user_id=?`).bind(seg[1]).run(); return json({ok:true});
-  }
-
-  if(path==='marketing' && method==='GET'){
-    if(!['administrador','gerente'].includes(user.role)) return json({error:'Sem permissão para relatórios.'},403);
-    const days=Math.min(365,Math.max(1,Number(url.searchParams.get('days'))||30)); const from=new Date(Date.now()-days*86400000).toISOString();
-    const rs=await context.env.DB.prepare(`SELECT event_type,source,medium,campaign,product_id,COUNT(*) total FROM tracking_events WHERE created_at>=? GROUP BY event_type,source,medium,campaign,product_id ORDER BY total DESC LIMIT 300`).bind(from).all();
-    return json({days,rows:rs.results||[]});
   }
 
   return json({error:'Rota não encontrada.'},404);

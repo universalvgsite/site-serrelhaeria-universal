@@ -3,90 +3,68 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#202328">
+  <meta name="theme-color" content="#151719">
   <meta name="robots" content="noindex,nofollow">
-  <title>Universal | Painel Operacional</title>
-  <link rel="manifest" href="/painel/manifest.webmanifest">
+  <title>Universal | Painel do Catálogo</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/painel/styles.css?v=15">
+  <link rel="stylesheet" href="/painel/styles.css?v=22">
 </head>
 <body>
-  <section id="authScreen" class="login-screen">
-    <div class="login-card">
-      <div class="login-brand logo-only"><img class="login-logo" src="/universal-logo.png" alt="Serralheria e Metalúrgica Universal"></div>
-      <div id="bootstrapBox" class="hidden">
-        <h2>Primeiro acesso</h2><p>Crie a conta do administrador responsável pelo sistema.</p>
-        <div class="field"><label>Nome</label><input id="bootName" autocomplete="name"></div>
-        <div class="field"><label>E-mail</label><input id="bootEmail" type="email" autocomplete="email"></div>
-        <div class="field"><label>Senha</label><input id="bootPassword" type="password" minlength="8" autocomplete="new-password"></div>
-        <button class="btn primary" id="bootstrapBtn" style="width:100%">Criar administrador</button>
+  <section id="authScreen" class="loginScreen">
+    <div class="loginCard">
+      <div class="loginBrand"><img src="/universal-logo.png" alt="Serralheria e Metalúrgica Universal"></div>
+      <div id="bootstrapBox" hidden>
+        <span class="overline">CONFIGURAÇÃO INICIAL</span>
+        <h1>Criar administrador</h1>
+        <p>Use este formulário somente no primeiro acesso ao banco de dados.</p>
+        <label class="field"><span>Nome</span><input id="bootName" autocomplete="name"></label>
+        <label class="field"><span>E-mail</span><input id="bootEmail" type="email" autocomplete="email"></label>
+        <label class="field"><span>Senha</span><input id="bootPassword" type="password" minlength="8" autocomplete="new-password"></label>
+        <button class="btn primary full" id="bootstrapBtn">Criar administrador</button>
       </div>
-      <div id="loginBox" class="hidden">
-        <h2>Acessar painel</h2><p>Entre com seu usuário individual.</p>
-        <div class="field"><label>E-mail</label><input id="loginEmail" type="email" autocomplete="username"></div>
-        <div class="field"><label>Senha</label><input id="loginPassword" type="password" autocomplete="current-password"></div>
-        <button class="btn primary" id="loginBtn" style="width:100%">Entrar</button>
+      <div id="loginBox" hidden>
+        <span class="overline">PAINEL DO CATÁLOGO</span>
+        <h1>Acessar painel</h1>
+        <p>Entre com o seu usuário individual.</p>
+        <label class="field"><span>E-mail</span><input id="loginEmail" type="email" autocomplete="username"></label>
+        <label class="field"><span>Senha</span><input id="loginPassword" type="password" autocomplete="current-password"></label>
+        <button class="btn primary full" id="loginBtn">Entrar</button>
       </div>
-      <div class="login-error" id="authError"></div>
+      <div class="formError" id="authError" hidden></div>
     </div>
   </section>
 
-  <div id="appShell" class="app-shell hidden">
+  <div id="appShell" class="appShell" hidden>
     <aside class="sidebar">
-      <div class="brand panel-logo-brand"><img class="panel-logo" src="/universal-logo.png" alt="Serralheria e Metalúrgica Universal"></div>
-      <nav id="nav" aria-label="Navegação principal">
-        <button class="nav-btn active home-nav-btn" type="button" data-view="dashboard" aria-label="Ir para o início">⌂ <span>Início</span></button>
-        <button class="nav-btn" data-view="orcamentos">▤ <span>Orçamentos</span></button>
-        <button class="nav-btn" data-view="pedidos">▣ <span>Pedidos</span></button>
-        <button class="nav-btn" data-view="producao">⚒ <span>Produção</span></button>
-        <button class="nav-btn" data-view="entregas">⇢ <span>Entregas</span></button>
-        <button class="nav-btn" data-view="clientes">◎ <span>Clientes</span></button>
-        <button class="nav-btn" data-view="produtos">◇ <span>Produtos</span></button>
-        <button class="nav-btn" data-view="estoque">▧ <span>Estoque</span></button>
-        <button class="nav-btn" data-view="vendedores">♙ <span>Vendedores</span></button>
-        <button class="nav-btn" data-view="produtores">⚙ <span>Produtores</span></button>
-        <button class="nav-btn" data-view="relatorios">◫ <span>Relatórios</span></button>
-        <button class="nav-btn admin-only" data-view="usuarios">♚ <span>Usuários</span></button>
-        <button class="nav-btn" data-view="auditoria">◷ <span>Auditoria</span></button>
-        <button class="nav-btn" data-view="config">⚙ <span>Configurações</span></button>
+      <a class="sideBrand" href="/" target="_blank" aria-label="Abrir site da Universal"><img src="/universal-logo.png" alt="Serralheria e Metalúrgica Universal"></a>
+      <div class="sideLabel">CATÁLOGO DO SITE</div>
+      <nav class="sideNav" aria-label="Navegação do painel">
+        <button class="navBtn active" data-view="dashboard">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h6V4H4zm10 7h6V11h-6zM4 20h6v-3H4zm10-13h6V4h-6z"/></svg><span>Resumo</span>
+        </button>
+        <button class="navBtn" data-view="produtos">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 13 11 22l-9-9V3h10z"/><circle cx="7" cy="8" r="1.5"/></svg><span>Produtos</span>
+        </button>
+        <button class="navBtn adminOnly" data-view="usuarios">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="7" r="4"/><path d="M2 21v-2a6 6 0 0 1 12 0v2M16 11h6M19 8v6"/></svg><span>Usuários</span>
+        </button>
       </nav>
-      <div class="sidebar-foot"><span id="sideUser"></span><div class="logout" id="logoutBtn">Sair</div></div>
+      <div class="sideFoot"><span id="sideUser"></span><button id="logoutBtn">Sair</button></div>
     </aside>
 
     <main class="main">
       <header class="topbar">
-        <div><h1 id="pageTitle">Visão geral</h1><p id="pageSubtitle">Acompanhe orçamentos, pedidos, produção e entregas.</p></div>
-        <div class="top-actions">
-          <div class="user-chip" id="userChip"></div>
-          <button class="btn ghost" id="installBtn" style="display:none">Instalar aplicativo</button>
-          <button class="btn ghost" id="backupBtn">Exportar backup</button>
-          <label class="btn ghost admin-manager file-btn">Importar backup<input id="restoreInput" type="file" accept="application/json" hidden></label>
-          <button class="btn primary can-budget" id="quickBudgetBtn">+ Novo orçamento</button>
-          <button class="btn ghost mobile-only" id="mobileLogoutBtn">Sair</button>
-        </div>
+        <div><span class="overline" id="pageOverline">PAINEL UNIVERSAL</span><h1 id="pageTitle">Resumo</h1><p id="pageSubtitle">Acessos e contatos recebidos pelo site.</p></div>
+        <div class="topActions"><a class="btn outline" href="/" target="_blank">Ver site</a><div class="userChip" id="userChip"></div><button class="mobileLogout" id="mobileLogoutBtn">Sair</button></div>
       </header>
       <section id="view-dashboard" class="view active"></section>
-      <section id="view-orcamentos" class="view"></section>
-      <section id="view-pedidos" class="view"></section>
-      <section id="view-producao" class="view"></section>
-      <section id="view-entregas" class="view"></section>
-      <section id="view-clientes" class="view"></section>
       <section id="view-produtos" class="view"></section>
-      <section id="view-estoque" class="view"></section>
-      <section id="view-vendedores" class="view"></section>
-      <section id="view-produtores" class="view"></section>
-      <section id="view-relatorios" class="view"></section>
       <section id="view-usuarios" class="view"></section>
-      <section id="view-auditoria" class="view"></section>
-      <section id="view-config" class="view"></section>
     </main>
   </div>
 
   <dialog id="modal" class="modal"><div id="modalContent"></div></dialog>
-  <div id="toast" class="toast"></div>
-  <script src="/painel/app.js?v=15" defer></script>
-  <script src="/painel/workflow.js?v=15" defer></script>
-  <script src="/painel/delivery.js?v=15" defer></script>
-  <script src="/painel/init.js?v=15" defer></script>
+  <div id="toast" class="toast" role="status"></div>
+  <script src="/painel/app.js?v=22" defer></script>
 </body>
 </html>
