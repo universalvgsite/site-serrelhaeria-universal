@@ -1,0 +1,112 @@
+.promoFlag{
+  position:absolute;
+  z-index:2;
+  top:12px;
+  right:12px;
+  padding:6px 9px;
+  border-radius:4px;
+  background:#111;
+  color:#fff;
+  font-size:11px;
+  font-weight:950;
+  letter-spacing:.45px;
+}
+
+.shippingDeal{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  margin:10px 0 0;
+  padding:8px 10px;
+  border:1px solid #bde5ca;
+  border-radius:6px;
+  background:#e9f8ee;
+  color:#126b34;
+  font-size:12px;
+  font-weight:900;
+}
+
+.modalImage{
+  min-height:430px;
+  padding:12px;
+  background:#eef0f2;
+}
+
+.modalImage img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  display:block;
+}
+
+.delivery div.free{
+  border-color:#8bd2a2;
+  background:#effaf2;
+  color:#126b34;
+}
+
+.instagram-call{
+  padding:32px 0;
+  border-top:1px solid #eee;
+  background:#fff;
+}
+
+.instagram-call .wrap{
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  align-items:center;
+  gap:18px;
+}
+
+.instagram-mark{
+  display:grid;
+  place-items:center;
+  width:54px;
+  height:54px;
+  border-radius:15px;
+  background:linear-gradient(135deg,#7124c6,#e3265b 55%,#f4a62a);
+  color:#fff;
+  box-shadow:0 10px 25px rgba(122,36,198,.2);
+  font-size:34px;
+  font-weight:900;
+}
+
+.instagram-call span{
+  color:var(--red);
+  font-size:11px;
+  font-weight:950;
+  letter-spacing:1.5px;
+}
+
+.instagram-call h2{
+  margin:2px 0 3px;
+  font-size:25px;
+  text-transform:uppercase;
+}
+
+.instagram-call p{
+  margin:0;
+  color:#686e73;
+  font-size:14px;
+}
+
+.instagram-btn{
+  padding:12px 16px;
+  border:1px solid #cfd2d5;
+  border-radius:7px;
+  font-weight:900;
+  white-space:nowrap;
+  transition:.2s;
+}
+
+.instagram-btn:hover{
+  border-color:#111;
+  background:#111;
+  color:#fff;
+}
+
+@media(max-width:640px){
+  .instagram-call .wrap{grid-template-columns:auto 1fr}
+  .instagram-btn{grid-column:1/-1;width:100%;text-align:center}
+  .modalImage{min-height:260px;padding:8px}
+}
