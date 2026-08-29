@@ -12,5 +12,5 @@
 
 /* Analytics filters and individual product links */
 .analyticsToolbar{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:20px;padding:18px 20px;border:1px solid var(--line);border-radius:10px;background:#fff}.analyticsToolbar>div:first-child{display:grid;gap:4px}.analyticsToolbar strong{font-size:19px}.analyticsToolbar span{font-size:13px;color:var(--muted)}.dateFilter{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap}.dateFilter label{display:grid;gap:5px;color:#5d646a;font-size:11px;font-weight:900}.dateFilter input{border:1px solid #cbd0d4;border-radius:7px;padding:8px 9px;color:var(--ink);background:#fff}.metricGrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.analyticsSection{margin-bottom:24px}.analyticsSectionHead{display:flex;align-items:baseline;justify-content:space-between;gap:15px;margin:0 0 12px;padding:0 2px}.analyticsSectionHead strong{font-size:18px}.analyticsSectionHead span{color:var(--muted);font-size:12px}.bioAnalytics{padding-top:4px}
 @media(max-width:1050px){.analyticsToolbar{align-items:flex-start;flex-direction:column}.dateFilter{width:100%}}
-

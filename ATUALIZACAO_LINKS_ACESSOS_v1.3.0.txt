@@ -1,4 +1,4 @@
-ATUALIZAÇÃO 1.3.0 — LINKS INDIVIDUAIS E ACESSOS DA BIO
+ATUALIZAÇÃO 1.3.1 — LINKS INDIVIDUAIS E ACESSOS DA BIO
 
 Esta atualização acrescenta:
 
@@ -9,7 +9,18 @@ Esta atualização acrescenta:
 
 3. Abertura automática do produto quando o link individual é acessado.
 
-4. No painel, contadores do link da bio:
+4. Ao abrir um produto no catálogo, a URL do navegador passa a ser individual,
+   por exemplo: https://universalserralheria.com.br/?produto=POR-0002.
+
+5. Botão “Copiar link do produto” dentro da janela de visualização.
+
+6. O link individual abre automaticamente o produto correto em uma nova janela,
+   conversa ou navegador.
+
+7. No painel, o resumo geral continua mostrando os acessos de todo o site,
+   independentemente da origem.
+
+8. No mesmo painel, há um bloco separado com os acessos do link da bio:
    - acessos de hoje;
    - acessos dos últimos 7 dias;
    - acessos do mês;
@@ -17,7 +28,7 @@ Esta atualização acrescenta:
    - total histórico da bio;
    - cliques no WhatsApp no período.
 
-5. Filtro por data inicial e final. Para desconsiderar os testes feitos durante a configuração, selecione somente o período posterior aos testes. O histórico não é apagado.
+9. Filtro por data inicial e final aplicado aos dois blocos. Para desconsiderar os testes feitos durante a configuração, selecione somente o período posterior aos testes. O histórico não é apagado.
 
 Arquivos principais substituídos:
 - functions/api/[[path]].js

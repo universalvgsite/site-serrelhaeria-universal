@@ -6,7 +6,7 @@ let stateVersion='';
 let currentUser=null;
 let currentView='dashboard';
 let usersCache=[];
-let metrics={today:0,week:0,month:0,total:0,period:0,whatsappClicks:0};
+let metrics={today:0,week:0,month:0,total:0,period:0,whatsappClicks:0,bioToday:0,bioWeek:0,bioMonth:0,bioTotal:0,bioPeriod:0,bioWhatsappClicks:0};
 let metricsFilter={from:'',to:''};
 
 const viewText={
@@ -119,7 +119,8 @@ function metricCard(label,value,detail,type=''){
 function renderDashboard(){
   const view=$('#view-dashboard');if(!view)return;
   const periodLabel=metricsFilter.from&&metricsFilter.to?`De ${metricsFilter.from.split('-').reverse().join('/')} até ${metricsFilter.to.split('-').reverse().join('/')}`:'Escolha as datas para filtrar';
-  view.innerHTML=`<div class="analyticsToolbar"><div><strong>Acessos pelo link da bio</strong><span>Instagram · campanha link_bio</span></div><div class="dateFilter"><label>De <input id="metricsFrom" type="date" value="${metricsFilter.from}"></label><label>Até <input id="metricsTo" type="date" value="${metricsFilter.to}"></label><button class="btn primary small" id="applyMetricsBtn">Aplicar período</button><button class="btn small" id="clearMetricsBtn">Limpar</button></div></div><div class="metricGrid">${metricCard('Acessos hoje',metrics.today,'Data atual no horário de Cuiabá')}${metricCard('Acessos na semana',metrics.week,'Últimos 7 dias')}${metricCard('Acessos no mês',metrics.month,'Mês atual')}${metricCard('Período selecionado',metrics.period,periodLabel)}${metricCard('Total da bio',metrics.total,'Todos os acessos da campanha')}${metricCard('WhatsApp no período',metrics.whatsappClicks,'Cliques registrados no intervalo','whatsapp')}</div><div class="dashboardNote"><strong>Como excluir seus testes da leitura</strong><br>Escolha uma data inicial e final. O histórico não é apagado; apenas o período exibido é alterado.</div>`;
+  const cards=(prefix='')=>prefix?`${metricCard('Acessos hoje',metrics.bioToday,'Data atual no horário de Cuiabá')}${metricCard('Acessos na semana',metrics.bioWeek,'Últimos 7 dias')}${metricCard('Acessos no mês',metrics.bioMonth,'Mês atual')}${metricCard('Período selecionado',metrics.bioPeriod,periodLabel)}${metricCard('Total da bio',metrics.bioTotal,'Todos os acessos da campanha')}${metricCard('WhatsApp no período',metrics.bioWhatsappClicks,'Cliques pelo link da bio no intervalo','whatsapp')}`:`${metricCard('Acessos hoje',metrics.today,'Data atual no horário de Cuiabá')}${metricCard('Acessos na semana',metrics.week,'Últimos 7 dias')}${metricCard('Acessos no mês',metrics.month,'Mês atual')}${metricCard('Período selecionado',metrics.period,periodLabel)}${metricCard('Total de acessos',metrics.total,'Todos os acessos do site')}${metricCard('WhatsApp no período',metrics.whatsappClicks,'Cliques registrados no intervalo','whatsapp')}`;
+  view.innerHTML=`<div class="analyticsToolbar"><div><strong>Visualização de acessos</strong><span>Escolha o período para comparar o site inteiro e o link da bio.</span></div><div class="dateFilter"><label>De <input id="metricsFrom" type="date" value="${metricsFilter.from}"></label><label>Até <input id="metricsTo" type="date" value="${metricsFilter.to}"></label><button class="btn primary small" id="applyMetricsBtn">Aplicar período</button><button class="btn small" id="clearMetricsBtn">Limpar</button></div></div><section class="analyticsSection"><div class="analyticsSectionHead"><strong>Acessos gerais do site</strong><span>Todos os visitantes, independentemente da origem.</span></div><div class="metricGrid">${cards()}</div></section><section class="analyticsSection bioAnalytics"><div class="analyticsSectionHead"><strong>Acessos pelo link da bio</strong><span>Instagram · campanha link_bio</span></div><div class="metricGrid">${cards('bio')}</div></section><div class="dashboardNote"><strong>Como excluir seus testes da leitura</strong><br>Escolha uma data inicial e final. O histórico não é apagado; apenas o período exibido é alterado.</div>`;
   $('#applyMetricsBtn').onclick=()=>{const from=$('#metricsFrom').value,to=$('#metricsTo').value;if((from&&!to)||(!from&&to)||from>to){toast('Informe um período válido.');return}metricsFilter={from,to};loadMetrics()};
   $('#clearMetricsBtn').onclick=()=>{metricsFilter={from:'',to:''};loadMetrics()};
 }
@@ -260,4 +261,3 @@ if('serviceWorker' in navigator)navigator.serviceWorker.getRegistrations().then(
 
 window.closeModal=closeModal;
 initAuth();
-

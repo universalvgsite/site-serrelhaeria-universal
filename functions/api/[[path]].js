@@ -375,19 +375,30 @@ async function route(context){
     const dateFilter=from&&to?` AND date(created_at,'-3 hours') BETWEEN ? AND ?`:'';
     const dateParams=from&&to?[from,to]:[];
     const bio=`source='instagram' AND medium='bio' AND campaign='link_bio'`;
-    const count=async(eventType,extra='',extraParams=[])=>context.env.DB.prepare(`SELECT COUNT(*) total FROM tracking_events WHERE event_type=? AND ${bio}${extra}`).bind(eventType,...extraParams).first();
-    const [today,week,month,total,period,whatsapp]=await Promise.all([
-      count('page_view',` AND date(created_at,'-3 hours')=date('now','-3 hours')`),
-      count('page_view',` AND date(created_at,'-3 hours')>=date('now','-3 hours','-6 days')`),
-      count('page_view',` AND date(created_at,'-3 hours')>=date('now','-3 hours','start of month')`),
+    const count=async(eventType,scope='',extra='',extraParams=[])=>context.env.DB.prepare(`SELECT COUNT(*) total FROM tracking_events WHERE event_type=? ${scope?'AND '+scope:''}${extra}`).bind(eventType,...extraParams).first();
+    const todayFilter=` AND date(created_at,'-3 hours')=date('now','-3 hours')`;
+    const weekFilter=` AND date(created_at,'-3 hours')>=date('now','-3 hours','-6 days')`;
+    const monthFilter=` AND date(created_at,'-3 hours')>=date('now','-3 hours','start of month')`;
+    const [today,week,month,total,period,whatsapp,bioToday,bioWeek,bioMonth,bioTotal,bioPeriod,bioWhatsapp]=await Promise.all([
+      count('page_view','',''+todayFilter),
+      count('page_view','',''+weekFilter),
+      count('page_view','',''+monthFilter),
       count('page_view'),
-      count('page_view',dateFilter,dateParams),
-      count('whatsapp_click',dateFilter,dateParams)
+      count('page_view','',dateFilter,dateParams),
+      count('whatsapp_click','',dateFilter,dateParams),
+      count('page_view',bio,todayFilter),
+      count('page_view',bio,weekFilter),
+      count('page_view',bio,monthFilter),
+      count('page_view',bio),
+      count('page_view',bio,dateFilter,dateParams),
+      count('whatsapp_click',bio,dateFilter,dateParams)
     ]);
     return json({
       today:Number(today?.total||0),week:Number(week?.total||0),month:Number(month?.total||0),
       total:Number(total?.total||0),period:Number(period?.total||0),
-      periodFrom:from||null,periodTo:to||null,whatsappClicks:Number(whatsapp?.total||0)
+      periodFrom:from||null,periodTo:to||null,whatsappClicks:Number(whatsapp?.total||0),
+      bioToday:Number(bioToday?.total||0),bioWeek:Number(bioWeek?.total||0),bioMonth:Number(bioMonth?.total||0),
+      bioTotal:Number(bioTotal?.total||0),bioPeriod:Number(bioPeriod?.total||0),bioWhatsappClicks:Number(bioWhatsapp?.total||0)
     });
   }
 
@@ -463,4 +474,3 @@ export async function onRequest(context){
     console.error(err); return json({error:'Erro interno do sistema.'},500);
   }
 }
-
