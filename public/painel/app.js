@@ -6,7 +6,8 @@ let stateVersion='';
 let currentUser=null;
 let currentView='dashboard';
 let usersCache=[];
-let metrics={visits:0,whatsappClicks:0};
+let metrics={today:0,week:0,month:0,total:0,period:0,whatsappClicks:0};
+let metricsFilter={from:'',to:''};
 
 const viewText={
   dashboard:['Resumo','Acessos e contatos recebidos pelo site.'],
@@ -105,8 +106,11 @@ function switchView(view){
   window.scrollTo(0,0);
 }
 
+function metricsQuery(){
+  return metricsFilter.from&&metricsFilter.to?`?from=${encodeURIComponent(metricsFilter.from)}&to=${encodeURIComponent(metricsFilter.to)}`:'';
+}
 async function loadMetrics(){
-  try{metrics=await api('metrics');renderDashboard()}catch(error){if(currentView==='dashboard')toast(error.message)}
+  try{metrics=await api('metrics'+metricsQuery());renderDashboard()}catch(error){if(currentView==='dashboard')toast(error.message)}
 }
 function metricCard(label,value,detail,type=''){
   const icon=type==='whatsapp'?'<path d="M12 21a9 9 0 1 0-7.6-4.2L3 22l5.4-1.4A9 9 0 0 0 12 21z"/><path d="M8.5 7.8c.5 4 3.7 7.1 7.7 7.7"/>':'<path d="M2 12s3.7-6 10-6 10 6 10 6-3.7 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="2.5"/>';
@@ -114,7 +118,10 @@ function metricCard(label,value,detail,type=''){
 }
 function renderDashboard(){
   const view=$('#view-dashboard');if(!view)return;
-  view.innerHTML=`<div class="metricGrid">${metricCard('Visitas ao site',metrics.visits,'Total de acessos registrados no site.')}${metricCard('Cliques no WhatsApp',metrics.whatsappClicks,'Total de contatos iniciados pelo site.','whatsapp')}</div><div class="dashboardNote">Os contadores são mantidos no Cloudflare D1. Esta atualização não apaga o histórico já registrado.</div>`;
+  const periodLabel=metricsFilter.from&&metricsFilter.to?`De ${metricsFilter.from.split('-').reverse().join('/')} até ${metricsFilter.to.split('-').reverse().join('/')}`:'Escolha as datas para filtrar';
+  view.innerHTML=`<div class="analyticsToolbar"><div><strong>Acessos pelo link da bio</strong><span>Instagram · campanha link_bio</span></div><div class="dateFilter"><label>De <input id="metricsFrom" type="date" value="${metricsFilter.from}"></label><label>Até <input id="metricsTo" type="date" value="${metricsFilter.to}"></label><button class="btn primary small" id="applyMetricsBtn">Aplicar período</button><button class="btn small" id="clearMetricsBtn">Limpar</button></div></div><div class="metricGrid">${metricCard('Acessos hoje',metrics.today,'Data atual no horário de Cuiabá')}${metricCard('Acessos na semana',metrics.week,'Últimos 7 dias')}${metricCard('Acessos no mês',metrics.month,'Mês atual')}${metricCard('Período selecionado',metrics.period,periodLabel)}${metricCard('Total da bio',metrics.total,'Todos os acessos da campanha')}${metricCard('WhatsApp no período',metrics.whatsappClicks,'Cliques registrados no intervalo','whatsapp')}</div><div class="dashboardNote"><strong>Como excluir seus testes da leitura</strong><br>Escolha uma data inicial e final. O histórico não é apagado; apenas o período exibido é alterado.</div>`;
+  $('#applyMetricsBtn').onclick=()=>{const from=$('#metricsFrom').value,to=$('#metricsTo').value;if((from&&!to)||(!from&&to)||from>to){toast('Informe um período válido.');return}metricsFilter={from,to};loadMetrics()};
+  $('#clearMetricsBtn').onclick=()=>{metricsFilter={from:'',to:''};loadMetrics()};
 }
 
 function isPromotion(p){return Boolean(p.promocaoAtiva&&Number(p.preco)>0&&Number(p.precoPromocional)>0&&Number(p.precoPromocional)<Number(p.preco))}
@@ -126,11 +133,21 @@ function productValueMarkup(product){
 function productThumb(product){return product.imagem?`<img class="productThumb" src="${esc(product.imagem)}" alt="">`:'<span class="productThumb placeholder">SEM FOTO</span>'}
 function renderProducts(){
   const products=state.produtos.filter(product=>!product.arquivado).sort((a,b)=>(Number(a.ordem)||999)-(Number(b.ordem)||999));
-  const content=products.length?`<div class="tableWrap"><table><thead><tr><th>Produto</th><th>Descrição</th><th>Valor</th><th>Publicação</th><th>Ações</th></tr></thead><tbody>${products.map(product=>`<tr><td><div class="productCell">${productThumb(product)}<div><span class="code">${esc(product.codigo||'Sem código')}</span><span class="category">${esc(product.categoria||'Produto')}</span></div></div></td><td>${esc(product.descricaoPublica||product.descricao||'—')}</td><td>${productValueMarkup(product)}${product.promocaoAtiva?`<div><span class="pill promo">Promoção${product.freteGratisCuiaba?' + frete Cuiabá':''}</span></div>`:''}</td><td><span class="pill ${product.siteAtivo!==false?'live':''}">${product.siteAtivo!==false?'No site':'Oculto'}</span></td><td><div class="actions"><button class="btn small" data-edit-product="${esc(product.id)}">Editar</button><button class="btn small danger" data-archive-product="${esc(product.id)}">Apagar</button></div></td></tr>`).join('')}</tbody></table></div>`:'<div class="empty"><strong>Nenhum produto cadastrado</strong>Cadastre o primeiro portão, porta ou lixeira para publicar no site.</div>';
+  const content=products.length?`<div class="tableWrap"><table><thead><tr><th>Produto</th><th>Descrição</th><th>Valor</th><th>Publicação</th><th>Ações</th></tr></thead><tbody>${products.map(product=>`<tr><td><div class="productCell">${productThumb(product)}<div><span class="code">${esc(product.codigo||'Sem código')}</span><span class="category">${esc(product.categoria||'Produto')}</span></div></div></td><td>${esc(product.descricaoPublica||product.descricao||'—')}</td><td>${productValueMarkup(product)}${product.promocaoAtiva?`<div><span class="pill promo">Promoção${product.freteGratisCuiaba?' + frete Cuiabá':''}</span></div>`:''}</td><td><span class="pill ${product.siteAtivo!==false?'live':''}">${product.siteAtivo!==false?'No site':'Oculto'}</span></td><td><div class="actions"><button class="btn small" data-share-product="${esc(product.codigo||'')}">Copiar link</button><button class="btn small" data-edit-product="${esc(product.id)}">Editar</button><button class="btn small danger" data-archive-product="${esc(product.id)}">Apagar</button></div></td></tr>`).join('')}</tbody></table></div>`:'<div class="empty"><strong>Nenhum produto cadastrado</strong>Cadastre o primeiro portão, porta ou lixeira para publicar no site.</div>';
   $('#view-produtos').innerHTML=`<div class="sectionCard"><div class="sectionTools"><div><h2>Catálogo</h2><p>Os códigos são gerados automaticamente e não voltam a ser usados.</p></div><button class="btn primary" id="newProductBtn">+ Cadastrar produto</button></div>${content}</div>`;
   $('#newProductBtn').onclick=()=>openProductEditor();
+  $$('[data-share-product]').forEach(button=>button.onclick=()=>copyProductLink(button.dataset.shareProduct));
   $$('[data-edit-product]').forEach(button=>button.onclick=()=>openProductEditor(button.dataset.editProduct));
   $$('[data-archive-product]').forEach(button=>button.onclick=()=>archiveProduct(button.dataset.archiveProduct));
+}
+function publicSiteOrigin(){
+  const current=new URL(window.location.href);
+  if(current.hostname.startsWith('painel.'))current.hostname=current.hostname.slice(7);
+  return current.origin;
+}
+async function copyProductLink(code){
+  const link=new URL(`/?produto=${encodeURIComponent(code)}`,publicSiteOrigin()).href;
+  try{await navigator.clipboard.writeText(link);toast('Link individual copiado.')}catch{window.prompt('Copie o link do produto:',link)}
 }
 function nextProductCode(category){
   const prefix=codePrefixes[category]||'POR';
@@ -243,3 +260,4 @@ if('serviceWorker' in navigator)navigator.serviceWorker.getRegistrations().then(
 
 window.closeModal=closeModal;
 initAuth();
+

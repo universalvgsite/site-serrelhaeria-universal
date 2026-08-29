@@ -1,0 +1,30 @@
+ATUALIZAÇÃO 1.3.0 — LINKS INDIVIDUAIS E ACESSOS DA BIO
+
+Esta atualização acrescenta:
+
+1. Link individual para cada produto, no formato:
+   https://universalserralheria.com.br/?produto=POR-0001
+
+2. Botão “Copiar link” no painel, dentro da lista de produtos.
+
+3. Abertura automática do produto quando o link individual é acessado.
+
+4. No painel, contadores do link da bio:
+   - acessos de hoje;
+   - acessos dos últimos 7 dias;
+   - acessos do mês;
+   - período selecionado;
+   - total histórico da bio;
+   - cliques no WhatsApp no período.
+
+5. Filtro por data inicial e final. Para desconsiderar os testes feitos durante a configuração, selecione somente o período posterior aos testes. O histórico não é apagado.
+
+Arquivos principais substituídos:
+- functions/api/[[path]].js
+- public/app.js
+- public/index.html
+- public/painel/app.js
+- public/painel/index.html
+- public/painel/styles.css
+
+Depois de enviar os arquivos ao repositório GitHub, aguarde a publicação automática do Cloudflare Pages.

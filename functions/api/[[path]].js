@@ -369,11 +369,26 @@ async function route(context){
   }
 
   if(path==='metrics' && method==='GET'){
-    const [views,whatsapp]=await Promise.all([
-      context.env.DB.prepare(`SELECT COUNT(*) total FROM tracking_events WHERE event_type='page_view'`).first(),
-      context.env.DB.prepare(`SELECT COUNT(*) total FROM tracking_events WHERE event_type='whatsapp_click'`).first()
+    const params=new URL(req.url).searchParams;
+    const from=/^\d{4}-\d{2}-\d{2}$/.test(params.get('from')||'')?params.get('from'):'';
+    const to=/^\d{4}-\d{2}-\d{2}$/.test(params.get('to')||'')?params.get('to'):'';
+    const dateFilter=from&&to?` AND date(created_at,'-3 hours') BETWEEN ? AND ?`:'';
+    const dateParams=from&&to?[from,to]:[];
+    const bio=`source='instagram' AND medium='bio' AND campaign='link_bio'`;
+    const count=async(eventType,extra='',extraParams=[])=>context.env.DB.prepare(`SELECT COUNT(*) total FROM tracking_events WHERE event_type=? AND ${bio}${extra}`).bind(eventType,...extraParams).first();
+    const [today,week,month,total,period,whatsapp]=await Promise.all([
+      count('page_view',` AND date(created_at,'-3 hours')=date('now','-3 hours')`),
+      count('page_view',` AND date(created_at,'-3 hours')>=date('now','-3 hours','-6 days')`),
+      count('page_view',` AND date(created_at,'-3 hours')>=date('now','-3 hours','start of month')`),
+      count('page_view'),
+      count('page_view',dateFilter,dateParams),
+      count('whatsapp_click',dateFilter,dateParams)
     ]);
-    return json({visits:Number(views?.total||0),whatsappClicks:Number(whatsapp?.total||0)});
+    return json({
+      today:Number(today?.total||0),week:Number(week?.total||0),month:Number(month?.total||0),
+      total:Number(total?.total||0),period:Number(period?.total||0),
+      periodFrom:from||null,periodTo:to||null,whatsappClicks:Number(whatsapp?.total||0)
+    });
   }
 
   if(path==='upload' && method==='POST'){
@@ -448,3 +463,4 @@ export async function onRequest(context){
     console.error(err); return json({error:'Erro interno do sistema.'},500);
   }
 }
+
