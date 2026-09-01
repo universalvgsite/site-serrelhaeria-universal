@@ -1,7 +1,7 @@
 const $=(selector,root=document)=>root.querySelector(selector);
 const $$=(selector,root=document)=>[...root.querySelectorAll(selector)];
 
-let state={empresa:{whatsapp:'556536844696'},produtos:[]};
+let state={empresa:{whatsapp:'556536844696',adicionalPortaoSocial:'',adicionalFechaduraTetra:''},produtos:[]};
 let stateVersion='';
 let currentUser=null;
 let currentView='dashboard';
@@ -21,6 +21,7 @@ function brl(value){return new Intl.NumberFormat('pt-BR',{style:'currency',curre
 function uid(prefix='id'){return `${prefix}_${Date.now().toString(36)}_${crypto.randomUUID().slice(0,8)}`}
 function roleLabel(role){return role==='administrador'?'Administrador':'Cadastrador'}
 function canManageUsers(){return currentUser?.role==='administrador'}
+function canManageSettings(){return currentUser?.role==='administrador'}
 function toast(message){const box=$('#toast');box.textContent=message;box.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>box.classList.remove('show'),3200)}
 function modal(html){$('#modalContent').innerHTML=html;if(!$('#modal').open)$('#modal').showModal()}
 function closeModal(){if($('#modal').open)$('#modal').close();$('#modalContent').innerHTML=''}
@@ -78,7 +79,7 @@ async function changePasswordNow(){
 }
 async function enterApp(){
   const response=await api('state');
-  state={empresa:{whatsapp:'556536844696',...(response.state?.empresa||{})},produtos:Array.isArray(response.state?.produtos)?response.state.produtos:[]};
+  state={empresa:{whatsapp:'556536844696',adicionalPortaoSocial:'',adicionalFechaduraTetra:'',...(response.state?.empresa||{})},produtos:Array.isArray(response.state?.produtos)?response.state.produtos:[]};
   stateVersion=response.version||'';
   currentUser=response.user||currentUser;
   $('#authScreen').hidden=true;$('#appShell').hidden=false;
@@ -132,10 +133,58 @@ function productValueMarkup(product){
   return `<span class="priceText">${brl(product.preco)}</span>`;
 }
 function productThumb(product){return product.imagem?`<img class="productThumb" src="${esc(product.imagem)}" alt="">`:'<span class="productThumb placeholder">SEM FOTO</span>'}
+function configuredMoney(value){return Number(value)>0?Number(value):null}
+function configuredMoneyLabel(value){const amount=configuredMoney(value);return amount==null?'Não configurado':brl(amount)}
+function productFeatureSummary(product){
+  const labels=[];
+  if(product.categoria==='Portão'){
+    if(product.temPortaoSocial)labels.push('Portão social incluso');
+    else if(product.permiteAdicionarPortaoSocial)labels.push('Portão social opcional');
+  }
+  if((product.categoria==='Porta'||product.temPortaoSocial)&&product.tipoFechadura){
+    labels.push(`Fechadura ${product.tipoFechadura==='tetra'?'tetra':'normal'}`);
+  }
+  return labels.length?`<span class="featureSummary">${labels.map(esc).join(' · ')}</span>`:'';
+}
+function addOnSettingsMarkup(){
+  const editButton=canManageSettings()?'<button class="btn primary" id="editAddOnSettingsBtn">Alterar valores</button>':'<span class="settingsRestriction">Somente o administrador pode alterar.</span>';
+  return `<section class="addOnSettingsCard"><div class="addOnSettingsHead"><div><span class="overline">VALORES GLOBAIS</span><h2>Adicionais do catálogo</h2><p>Cadastre uma vez. Os mesmos valores serão usados em todos os produtos configurados.</p></div>${editButton}</div><div class="addOnValueGrid"><article><span>Adicionar portão social</span><strong>${configuredMoneyLabel(state.empresa.adicionalPortaoSocial)}</strong><small>Somente nos portões que permitirem o adicional.</small></article><article><span>Trocar pela fechadura tetra</span><strong>${configuredMoneyLabel(state.empresa.adicionalFechaduraTetra)}</strong><small>Mesmo valor para portas e portões.</small></article></div><div class="settingsNote">Promoções alteram somente o valor do produto. Os adicionais permanecem com o valor integral.</div></section>`;
+}
+function openAddOnSettings(){
+  if(!canManageSettings())return toast('Somente o administrador pode alterar os valores dos adicionais.');
+  modal(`<div class="modalHead"><strong>Valores dos adicionais</strong><button class="iconBtn" id="closeSettingsBtn" aria-label="Fechar">×</button></div><div class="modalBody"><div class="formGrid"><label class="field"><span>Adicionar portão social</span><input id="socialAddOnPrice" type="number" min="0" step="0.01" value="${configuredMoney(state.empresa.adicionalPortaoSocial)??''}" placeholder="0,00"><small class="help">Valor único para todos os portões.</small></label><label class="field"><span>Trocar pela fechadura tetra</span><input id="tetraAddOnPrice" type="number" min="0" step="0.01" value="${configuredMoney(state.empresa.adicionalFechaduraTetra)??''}" placeholder="0,00"><small class="help">Mesmo acréscimo em portas e portões.</small></label></div><div class="notice"><strong>Importante:</strong> deixe um campo vazio somente se não quiser oferecer aquele adicional no catálogo.</div></div><div class="modalFoot"><button class="btn" id="cancelSettingsBtn">Cancelar</button><button class="btn primary" id="saveSettingsBtn">Salvar valores</button></div>`);
+  $('#closeSettingsBtn').onclick=closeModal;
+  $('#cancelSettingsBtn').onclick=closeModal;
+  $('#saveSettingsBtn').onclick=saveAddOnSettings;
+}
+async function saveAddOnSettings(){
+  const socialRaw=$('#socialAddOnPrice').value.trim();
+  const tetraRaw=$('#tetraAddOnPrice').value.trim();
+  const social=socialRaw===''?'':Number(socialRaw);
+  const tetra=tetraRaw===''?'':Number(tetraRaw);
+  if(social!==''&&(!Number.isFinite(social)||!(social>0)))return toast('Informe um valor válido para o portão social ou deixe o campo vazio.');
+  if(tetra!==''&&(!Number.isFinite(tetra)||!(tetra>0)))return toast('Informe um valor válido para a fechadura tetra ou deixe o campo vazio.');
+  const nextCompany={...state.empresa,adicionalPortaoSocial:social,adicionalFechaduraTetra:tetra};
+  try{
+    const response=await api('state',{method:'PUT',body:JSON.stringify({state:{empresa:nextCompany},audit:{action:'Valores dos adicionais alterados',detail:`Portão social: ${social===''?'não configurado':brl(social)} · Fechadura tetra: ${tetra===''?'não configurada':brl(tetra)}`,collection:'empresa'},version:stateVersion})});
+    state.empresa={...nextCompany,...(response.state?.empresa||{})};
+    state.produtos=Array.isArray(response.state?.produtos)?response.state.produtos:state.produtos;
+    stateVersion=response.version||stateVersion;
+    closeModal();renderProducts();toast('Valores dos adicionais atualizados.');
+  }catch(error){
+    toast(error.message);
+    if(error.code==='STATE_CONFLICT'){
+      const fresh=await api('state');
+      state={empresa:{...state.empresa,...(fresh.state?.empresa||{})},produtos:Array.isArray(fresh.state?.produtos)?fresh.state.produtos:[]};
+      stateVersion=fresh.version||'';closeModal();renderProducts();
+    }
+  }
+}
 function renderProducts(){
   const products=state.produtos.filter(product=>!product.arquivado).sort((a,b)=>(Number(a.ordem)||999)-(Number(b.ordem)||999));
-  const content=products.length?`<div class="tableWrap"><table><thead><tr><th>Produto</th><th>Descrição</th><th>Valor</th><th>Publicação</th><th>Ações</th></tr></thead><tbody>${products.map(product=>`<tr><td><div class="productCell">${productThumb(product)}<div><span class="code">${esc(product.codigo||'Sem código')}</span><span class="category">${esc(product.categoria||'Produto')}</span></div></div></td><td>${esc(product.descricaoPublica||product.descricao||'—')}</td><td>${productValueMarkup(product)}${product.promocaoAtiva?`<div><span class="pill promo">Promoção${product.freteGratisCuiaba?' + frete Cuiabá':''}</span></div>`:''}</td><td><span class="pill ${product.siteAtivo!==false?'live':''}">${product.siteAtivo!==false?'No site':'Oculto'}</span></td><td><div class="actions"><button class="btn small" data-share-product="${esc(product.codigo||'')}">Copiar link</button><button class="btn small" data-edit-product="${esc(product.id)}">Editar</button><button class="btn small danger" data-archive-product="${esc(product.id)}">Apagar</button></div></td></tr>`).join('')}</tbody></table></div>`:'<div class="empty"><strong>Nenhum produto cadastrado</strong>Cadastre o primeiro portão, porta ou lixeira para publicar no site.</div>';
-  $('#view-produtos').innerHTML=`<div class="sectionCard"><div class="sectionTools"><div><h2>Catálogo</h2><p>Os códigos são gerados automaticamente e não voltam a ser usados.</p></div><button class="btn primary" id="newProductBtn">+ Cadastrar produto</button></div>${content}</div>`;
+  const content=products.length?`<div class="tableWrap"><table><thead><tr><th>Produto</th><th>Descrição</th><th>Valor</th><th>Publicação</th><th>Ações</th></tr></thead><tbody>${products.map(product=>`<tr><td><div class="productCell">${productThumb(product)}<div><span class="code">${esc(product.codigo||'Sem código')}</span><span class="category">${esc(product.categoria||'Produto')}</span>${productFeatureSummary(product)}</div></div></td><td>${esc(product.descricaoPublica||product.descricao||'—')}</td><td>${productValueMarkup(product)}${product.promocaoAtiva?`<div><span class="pill promo">Promoção${product.freteGratisCuiaba?' + frete Cuiabá':''}</span></div>`:''}</td><td><span class="pill ${product.siteAtivo!==false?'live':''}">${product.siteAtivo!==false?'No site':'Oculto'}</span></td><td><div class="actions"><button class="btn small" data-share-product="${esc(product.codigo||'')}">Copiar link</button><button class="btn small" data-edit-product="${esc(product.id)}">Editar</button><button class="btn small danger" data-archive-product="${esc(product.id)}">Apagar</button></div></td></tr>`).join('')}</tbody></table></div>`:'<div class="empty"><strong>Nenhum produto cadastrado</strong>Cadastre o primeiro portão, porta ou lixeira para publicar no site.</div>';
+  $('#view-produtos').innerHTML=`${addOnSettingsMarkup()}<div class="sectionCard"><div class="sectionTools"><div><h2>Catálogo</h2><p>Os códigos são gerados automaticamente e não voltam a ser usados.</p></div><button class="btn primary" id="newProductBtn">+ Cadastrar produto</button></div>${content}</div>`;
+  if($('#editAddOnSettingsBtn'))$('#editAddOnSettingsBtn').onclick=openAddOnSettings;
   $('#newProductBtn').onclick=()=>openProductEditor();
   $$('[data-share-product]').forEach(button=>button.onclick=()=>copyProductLink(button.dataset.shareProduct));
   $$('[data-edit-product]').forEach(button=>button.onclick=()=>openProductEditor(button.dataset.editProduct));
@@ -158,14 +207,28 @@ function nextProductCode(category){
 }
 function openProductEditor(productId=''){
   const existing=state.produtos.find(product=>product.id===productId);
-  const product=existing||{id:uid('prd'),categoria:'Portão',codigo:nextProductCode('Portão'),imagem:'',descricaoPublica:'',preco:'',promocaoAtiva:false,precoPromocional:'',freteGratisCuiaba:false,siteAtivo:true};
+  const product=existing||{id:uid('prd'),categoria:'Portão',codigo:nextProductCode('Portão'),imagem:'',descricaoPublica:'',preco:'',promocaoAtiva:false,precoPromocional:'',freteGratisCuiaba:false,siteAtivo:true,temPortaoSocial:false,permiteAdicionarPortaoSocial:true,tipoFechadura:''};
   const image=product.imagem?`<img src="${esc(product.imagem)}" alt="Imagem do produto">`:'A imagem aparecerá aqui';
-  modal(`<div class="modalHead"><strong>${existing?'Editar produto':'Cadastrar produto'}</strong><button class="iconBtn" id="closeEditorBtn" aria-label="Fechar">×</button></div><div class="modalBody"><div class="formGrid"><label class="field"><span>Categoria</span><select id="pCategory" ${existing?'disabled':''}><option value="Portão" ${product.categoria==='Portão'?'selected':''}>Portão</option><option value="Porta" ${product.categoria==='Porta'?'selected':''}>Porta</option><option value="Lixeira" ${product.categoria==='Lixeira'?'selected':''}>Lixeira</option></select></label><label class="field"><span>Código automático</span><input id="pCode" value="${esc(product.codigo||nextProductCode(product.categoria||'Portão'))}" disabled><small class="help">O código não pode ser alterado e nunca será reutilizado.</small></label><div class="field full"><span>Foto do produto</span><div class="imageEditor"><div class="imagePreview" id="imagePreview">${image}</div><div><input id="pImage" type="file" accept="image/jpeg,image/png,image/webp"><input id="pImageUrl" type="hidden" value="${esc(product.imagem||'')}"><div class="uploadStatus" id="uploadStatus">JPG, PNG ou WebP de até 3 MB.</div></div></div></div><label class="field full"><span>Descrição que aparecerá no site</span><textarea id="pDescription" maxlength="500" placeholder="Descreva somente o que o cliente precisa saber sobre este produto.">${esc(product.descricaoPublica||product.descricao||'')}</textarea></label><label class="field"><span>Valor</span><input id="pPrice" type="number" min="0" step="0.01" value="${Number(product.preco)>0?Number(product.preco):''}" placeholder="Deixe vazio para orçamento"><small class="help">Se ficar vazio, o site mostrará “Solicite orçamento”.</small></label><div class="switchRow"><input id="pVisible" type="checkbox" ${product.siteAtivo!==false?'checked':''}><label for="pVisible"><strong>Exibir no site</strong><small>Desmarque para manter o cadastro oculto.</small></label></div><div class="switchRow field full"><input id="pPromotion" type="checkbox" ${product.promocaoAtiva?'checked':''}><label for="pPromotion"><strong>Produto em promoção</strong><small>Ative para informar um valor promocional.</small></label></div><div class="promoOptions" id="promotionOptions" ${product.promocaoAtiva?'':'hidden'}><label class="field"><span>Valor da promoção</span><input id="pPromoPrice" type="number" min="0" step="0.01" value="${Number(product.precoPromocional)>0?Number(product.precoPromocional):''}" placeholder="0,00"></label><div class="switchRow"><input id="pFreeCuiaba" type="checkbox" ${product.promocaoAtiva&&product.freteGratisCuiaba?'checked':''}><label for="pFreeCuiaba"><strong>Frete grátis para Cuiabá</strong><small>Vale somente para esta promoção. Se não marcar, Cuiabá continua R$ 100,00.</small></label></div></div></div></div><div class="modalFoot"><button class="btn" id="cancelProductBtn">Cancelar</button><button class="btn primary" id="saveProductBtn">Salvar produto</button></div>`);
+  const doorLock=product.categoria==='Porta'?product.tipoFechadura||'':'';
+  const gateLock=product.temPortaoSocial&&product.tipoFechadura?product.tipoFechadura:'normal';
+  modal(`<div class="modalHead"><strong>${existing?'Editar produto':'Cadastrar produto'}</strong><button class="iconBtn" id="closeEditorBtn" aria-label="Fechar">×</button></div><div class="modalBody"><div class="formGrid"><label class="field"><span>Categoria</span><select id="pCategory" ${existing?'disabled':''}><option value="Portão" ${product.categoria==='Portão'?'selected':''}>Portão</option><option value="Porta" ${product.categoria==='Porta'?'selected':''}>Porta</option><option value="Lixeira" ${product.categoria==='Lixeira'?'selected':''}>Lixeira</option></select></label><label class="field"><span>Código automático</span><input id="pCode" value="${esc(product.codigo||nextProductCode(product.categoria||'Portão'))}" disabled><small class="help">O código não pode ser alterado e nunca será reutilizado.</small></label><div class="field full"><span>Foto do produto</span><div class="imageEditor"><div class="imagePreview" id="imagePreview">${image}</div><div><input id="pImage" type="file" accept="image/jpeg,image/png,image/webp"><input id="pImageUrl" type="hidden" value="${esc(product.imagem||'')}"><div class="uploadStatus" id="uploadStatus">JPG, PNG ou WebP de até 3 MB.</div></div></div></div><label class="field full"><span>Descrição que aparecerá no site</span><textarea id="pDescription" maxlength="500" placeholder="Descreva somente o que o cliente precisa saber sobre este produto.">${esc(product.descricaoPublica||product.descricao||'')}</textarea></label><label class="field"><span>Valor</span><input id="pPrice" type="number" min="0" step="0.01" value="${Number(product.preco)>0?Number(product.preco):''}" placeholder="Deixe vazio para orçamento"><small class="help">Se ficar vazio, o site mostrará “Solicite orçamento”.</small></label><div class="switchRow"><input id="pVisible" type="checkbox" ${product.siteAtivo!==false?'checked':''}><label for="pVisible"><strong>Exibir no site</strong><small>Desmarque para manter o cadastro oculto.</small></label></div><section class="productConfiguration field full" id="gateConfiguration"><div class="productConfigurationHead"><strong>Portão social e fechadura</strong><small>Defina o que já faz parte deste portão e o que pode ser acrescentado.</small></div><div class="switchRow"><input id="pHasSocialGate" type="checkbox" ${product.temPortaoSocial?'checked':''}><label for="pHasSocialGate"><strong>Este portão já possui portão social</strong><small>Marque quando o portão social já estiver incluído no valor do produto.</small></label></div><div class="switchRow" id="allowSocialGateRow"><input id="pAllowSocialGate" type="checkbox" ${product.permiteAdicionarPortaoSocial?'checked':''}><label for="pAllowSocialGate"><strong>Permitir portão social como adicional</strong><small>O catálogo usará o valor global de ${esc(configuredMoneyLabel(state.empresa.adicionalPortaoSocial))}.</small></label></div><label class="field" id="gateLockTypeField"><span>Fechadura incluída no portão social</span><select id="pGateLockType"><option value="normal" ${gateLock==='normal'?'selected':''}>Normal</option><option value="tetra" ${gateLock==='tetra'?'selected':''}>Tetra</option></select><small class="help">Se for normal, o cliente poderá trocar pela tetra pelo acréscimo global.</small></label></section><section class="productConfiguration field full" id="doorConfiguration"><div class="productConfigurationHead"><strong>Fechadura da porta</strong><small>Informe a fechadura que já está incluída no valor do produto.</small></div><label class="field"><span>Tipo de fechadura incluída</span><select id="pDoorLockType"><option value="" ${doorLock===''?'selected':''}>Não configurada</option><option value="normal" ${doorLock==='normal'?'selected':''}>Normal</option><option value="tetra" ${doorLock==='tetra'?'selected':''}>Tetra</option></select><small class="help">Com fechadura normal, o catálogo oferecerá a troca pela tetra por ${esc(configuredMoneyLabel(state.empresa.adicionalFechaduraTetra))}.</small></label></section><div class="switchRow field full"><input id="pPromotion" type="checkbox" ${product.promocaoAtiva?'checked':''}><label for="pPromotion"><strong>Produto em promoção</strong><small>Ative para informar um valor promocional.</small></label></div><div class="promoOptions" id="promotionOptions" ${product.promocaoAtiva?'':'hidden'}><label class="field"><span>Valor da promoção</span><input id="pPromoPrice" type="number" min="0" step="0.01" value="${Number(product.precoPromocional)>0?Number(product.precoPromocional):''}" placeholder="0,00"></label><div class="switchRow"><input id="pFreeCuiaba" type="checkbox" ${product.promocaoAtiva&&product.freteGratisCuiaba?'checked':''}><label for="pFreeCuiaba"><strong>Frete grátis para Cuiabá</strong><small>Vale somente para esta promoção. Se não marcar, Cuiabá continua R$ 100,00.</small></label></div></div></div></div><div class="modalFoot"><button class="btn" id="cancelProductBtn">Cancelar</button><button class="btn primary" id="saveProductBtn">Salvar produto</button></div>`);
   $('#closeEditorBtn').onclick=closeModal;$('#cancelProductBtn').onclick=closeModal;
-  $('#pCategory').onchange=()=>{$('#pCode').value=nextProductCode($('#pCategory').value)};
+  $('#pCategory').onchange=()=>{$('#pCode').value=nextProductCode($('#pCategory').value);updateProductConfiguration(!existing)};
+  $('#pHasSocialGate').onchange=()=>updateProductConfiguration(false);
   $('#pPromotion').onchange=togglePromotionOptions;
   $('#pImage').onchange=uploadProductImage;
   $('#saveProductBtn').onclick=()=>saveProduct(product.id,Boolean(existing));
+  updateProductConfiguration(!existing);
+}
+function updateProductConfiguration(initializeNewDoor=false){
+  const category=$('#pCategory')?.value||'';
+  const gate=$('#gateConfiguration'),door=$('#doorConfiguration');
+  if(gate)gate.hidden=category!=='Portão';
+  if(door)door.hidden=category!=='Porta';
+  const hasSocial=Boolean($('#pHasSocialGate')?.checked);
+  if($('#allowSocialGateRow'))$('#allowSocialGateRow').hidden=hasSocial;
+  if($('#gateLockTypeField'))$('#gateLockTypeField').hidden=!hasSocial;
+  if(initializeNewDoor&&category==='Porta'&&$('#pDoorLockType')&&!$('#pDoorLockType').value)$('#pDoorLockType').value='normal';
 }
 function togglePromotionOptions(){
   const active=$('#pPromotion').checked;
@@ -191,12 +254,15 @@ async function saveProduct(productId,exists){
   const promotion=$('#pPromotion').checked;
   const promoRaw=$('#pPromoPrice').value.trim();
   const promoPrice=promotion&&promoRaw!==''?Number(promoRaw):'';
+  const hasSocialGate=category==='Portão'&&$('#pHasSocialGate').checked;
+  const allowsSocialGate=category==='Portão'&&!hasSocialGate&&$('#pAllowSocialGate').checked;
+  const lockType=category==='Porta'?$('#pDoorLockType').value:hasSocialGate?$('#pGateLockType').value:'';
   if(!description)return toast('Informe a descrição que aparecerá no site.');
   if(!image)return toast('Envie a foto do produto.');
   if(price!==''&&price<=0)return toast('Informe um valor maior que zero ou deixe o campo vazio.');
   if(promotion&&(price===''||!(promoPrice>0)||promoPrice>=price))return toast('Na promoção, informe um valor promocional menor que o valor normal.');
   const current=state.produtos.find(product=>product.id===productId)||{};
-  const product={...current,id:productId,categoria:category,codigo:code,nome:`${category} ${code}`,imagem:image,descricao:description,descricaoPublica:description,preco:price,promocaoAtiva:promotion,precoPromocional:promotion?promoPrice:'',freteGratisCuiaba:Boolean(promotion&&$('#pFreeCuiaba').checked),siteAtivo:$('#pVisible').checked,arquivado:false,status:'ativo',ordem:Number(current.ordem)||state.produtos.length+1,updatedAt:new Date().toISOString()};
+  const product={...current,id:productId,categoria:category,codigo:code,nome:`${category} ${code}`,imagem:image,descricao:description,descricaoPublica:description,preco:price,promocaoAtiva:promotion,precoPromocional:promotion?promoPrice:'',freteGratisCuiaba:Boolean(promotion&&$('#pFreeCuiaba').checked),temPortaoSocial:hasSocialGate,permiteAdicionarPortaoSocial:allowsSocialGate,tipoFechadura:lockType,siteAtivo:$('#pVisible').checked,arquivado:false,status:'ativo',ordem:Number(current.ordem)||state.produtos.length+1,updatedAt:new Date().toISOString()};
   if(exists)state.produtos[state.produtos.findIndex(item=>item.id===productId)]=product;else state.produtos.push({...product,createdAt:new Date().toISOString()});
   try{await persistProducts({action:exists?'Produto alterado':'Produto cadastrado',detail:`${code} · ${category}`,collection:'produtos',entityId:productId});closeModal();renderProducts();toast('Produto salvo e catálogo atualizado.')}catch{}
 }

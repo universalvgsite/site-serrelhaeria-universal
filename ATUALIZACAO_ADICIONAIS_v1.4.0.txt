@@ -1,0 +1,49 @@
+ATUALIZAÇÃO 1.4.0 — PORTÃO SOCIAL E FECHADURA TETRA
+
+O QUE FOI ACRESCENTADO
+
+1. Dois valores globais no painel:
+   - adicional para portão social;
+   - adicional para troca pela fechadura tetra.
+
+2. Somente o Administrador altera esses valores. O valor da fechadura tetra
+   é o mesmo para portas e portões.
+
+3. No cadastro de portões:
+   - informar se o portão social já está incluído;
+   - permitir ou não adicionar o portão social;
+   - informar se a fechadura incluída é normal ou tetra.
+
+4. No cadastro de portas:
+   - informar se a fechadura incluída é normal ou tetra.
+
+5. No catálogo:
+   - portão social opcional soma o valor global ao produto;
+   - a fechadura tetra soma o mesmo valor global em portas e portões;
+   - a fechadura normal fica incluída no valor original;
+   - os adicionais são discriminados na mensagem do WhatsApp;
+   - o total é atualizado antes do cliente continuar o atendimento.
+
+6. Promoções continuam sendo aplicadas somente ao valor do produto. Os
+   adicionais mantêm os valores integrais cadastrados no painel.
+
+PRESERVAÇÃO DOS DADOS
+
+- Não foram criadas, removidas ou renomeadas tabelas.
+- Produtos antigos permanecem neutros até serem editados e configurados.
+- Usuários, senhas, produtos, acessos gerais, acessos da bio e cliques no
+  WhatsApp continuam no mesmo banco Cloudflare D1.
+- Links individuais dos produtos continuam no formato ?produto=POR-0001.
+- Imagens continuam no mesmo Supabase Storage.
+
+PUBLICAÇÃO
+
+Envie o conteúdo desta versão para o mesmo repositório GitHub. No Cloudflare,
+mantenha o binding D1 chamado DB e as mesmas variáveis do Supabase. Não crie
+outro banco e não execute novamente o primeiro cadastro de administrador.
+
+REVERSÃO
+
+Se for necessário, use Deployments no Cloudflare Pages e escolha a implantação
+anterior em "Rollback to this deployment". Depois reverta também o commit no
+GitHub para impedir que a versão nova seja publicada novamente.

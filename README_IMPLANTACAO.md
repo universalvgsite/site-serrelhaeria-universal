@@ -1,4 +1,4 @@
-# Serralheria e Metalúrgica Universal — atualização 1.2.0
+# Serralheria e Metalúrgica Universal — atualização 1.4.0
 
 Projeto de produção para GitHub e Cloudflare Pages.
 
@@ -15,6 +15,8 @@ Ao manter o mesmo banco D1:
 
 Não crie outro banco D1 durante esta atualização.
 
+Esta atualização não cria tabelas e não exige migração. Os novos campos são opcionais e ficam no mesmo registro `app_state`. Produtos antigos continuam com o comportamento anterior até serem editados e configurados.
+
 ## O que está ativo
 
 - site público em `/`;
@@ -25,6 +27,9 @@ Não crie outro banco D1 durante esta atualização.
 - preço normal, promoção e frete grátis promocional opcional para Cuiabá;
 - usuários com os perfis Administrador e Cadastrador;
 - contadores de visitas e cliques no WhatsApp;
+- valores globais para portão social e fechadura tetra, alterados pelo administrador;
+- portão social incluso ou opcional nos portões;
+- fechadura normal ou tetra nas portas e nos portões com portão social;
 - imagens no Supabase Storage;
 - autenticação e dados no Cloudflare D1.
 

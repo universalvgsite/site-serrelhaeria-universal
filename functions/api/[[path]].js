@@ -15,6 +15,8 @@ const DEFAULT_STATE = {
     freteCuiaba: 100,
     medidaPortao: '3,10 x 2,10 m',
     medidaPorta: '0,80 x 2,10 m',
+    adicionalPortaoSocial: '',
+    adicionalFechaduraTetra: '',
     ga4Id: '',
     metaPixelId: ''
   },
@@ -32,7 +34,7 @@ const DEFAULT_STATE = {
 // O painel atual é restrito ao catálogo. Os perfis antigos continuam aceitos
 // para preservar os usuários do D1, mas passam a operar como Cadastrador.
 const ROLE_COLLECTIONS = {
-  administrador: ['produtos'],
+  administrador: ['empresa','produtos'],
   cadastrador: ['produtos'],
   gerente: ['produtos'],
   vendedor: ['produtos'],
@@ -60,10 +62,25 @@ function safeParse(s, fallback){ try{return JSON.parse(s)}catch{return fallback}
 function normalizeEmail(v=''){ return String(v).trim().toLowerCase(); }
 function id(prefix='id'){ return `${prefix}_${Date.now().toString(36)}_${crypto.randomUUID().slice(0,8)}`; }
 function panelRole(role){ return role==='administrador'?'administrador':'cadastrador'; }
+function optionalMoney(value){
+  if(value==null||value==='') return '';
+  const number=Number(value);
+  return Number.isFinite(number)&&number>0?Math.round(number*100)/100:'';
+}
+function normalizeCompany(company={}){
+  return {
+    ...company,
+    adicionalPortaoSocial:optionalMoney(company.adicionalPortaoSocial),
+    adicionalFechaduraTetra:optionalMoney(company.adicionalFechaduraTetra)
+  };
+}
 function normalizeProduct(product={},index=0){
   const allowedCategories=['Portão','Porta','Lixeira'];
   const category=allowedCategories.includes(product.categoria)?product.categoria:'Portão';
   const promotion=Boolean(product.promocaoAtiva);
+  const hasSocialGate=category==='Portão'&&product.temPortaoSocial===true;
+  const allowsSocialGate=category==='Portão'&&!hasSocialGate&&product.permiteAdicionarPortaoSocial===true;
+  const lockType=['normal','tetra'].includes(product.tipoFechadura)?product.tipoFechadura:'';
   return {
     ...product,
     categoria:category,
@@ -73,6 +90,9 @@ function normalizeProduct(product={},index=0){
     promocaoAtiva:promotion,
     precoPromocional:product.precoPromocional==null||product.precoPromocional===''?'':Number(product.precoPromocional)||0,
     freteGratisCuiaba:Boolean(promotion&&product.freteGratisCuiaba),
+    temPortaoSocial:hasSocialGate,
+    permiteAdicionarPortaoSocial:allowsSocialGate,
+    tipoFechadura:(category==='Porta'||hasSocialGate)?lockType:'',
     siteAtivo:product.siteAtivo!==false,
     ordem:Number(product.ordem)||index+1
   };
@@ -179,7 +199,7 @@ async function getStateRecord(DB){
   const state = {
     ...clone(DEFAULT_STATE),
     ...raw,
-    empresa:{...DEFAULT_STATE.empresa,...(raw.empresa||{})},
+    empresa:normalizeCompany({...DEFAULT_STATE.empresa,...(raw.empresa||{})}),
     clientes:Array.isArray(raw.clientes)?raw.clientes:[],
     vendedores:Array.isArray(raw.vendedores)?raw.vendedores:[],
     produtores:Array.isArray(raw.produtores)?raw.produtores:[],
@@ -242,7 +262,11 @@ async function saveState(context, user, incoming, auditMeta={}, expectedVersion=
   }
   const allowed = ROLE_COLLECTIONS[user.role]||[];
   const merged = clone(before);
-  for(const key of allowed){ if(Object.prototype.hasOwnProperty.call(incoming,key)) merged[key]=incoming[key]; }
+  for(const key of allowed){
+    if(!Object.prototype.hasOwnProperty.call(incoming,key)) continue;
+    merged[key]=key==='empresa'?{...before.empresa,...(incoming.empresa||{})}:incoming[key];
+  }
+  merged.empresa=normalizeCompany({...DEFAULT_STATE.empresa,...(merged.empresa||{})});
   merged.produtos=allocateProductCodes((Array.isArray(merged.produtos)?merged.produtos:[]).map(normalizeProduct),before.produtos||[]);
 
   const col=auditMeta.collection;
