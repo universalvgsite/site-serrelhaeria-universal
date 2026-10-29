@@ -6,3 +6,9 @@
 /painel/*
   Cache-Control: no-cache
   X-Frame-Options: DENY
+
+/black-friday/*
+  Cache-Control: no-cache
+
+/api/black-friday
+  Cache-Control: no-store

@@ -1,0 +1,5 @@
+/* Integração mínima no site atual; não altera o restante do catálogo. */
+.bfMenuLink{color:#f9cc65!important;font-weight:900!important;text-shadow:0 0 9px #d6a42965}
+.bfSiteButton{display:inline-flex;align-items:center;justify-content:center;gap:8px;text-align:center;padding:14px 20px;border:1px solid #ffdc89;border-radius:9px;background:linear-gradient(160deg,#ffe9a5 0%,#ebb239 55%,#bb7714 100%);color:#161009!important;font-size:14px;font-weight:950;box-shadow:0 0 20px #e0a32b77;text-decoration:none;transition:filter .2s}
+.bfSiteButton:hover{filter:brightness(1.08)}
+@media(max-width:640px){.bfSiteButton{width:100%;font-size:13px;padding:12px}.heroBtns{flex-wrap:wrap}}

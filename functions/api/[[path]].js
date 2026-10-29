@@ -87,6 +87,8 @@ function normalizeProduct(product={},index=0){
     codigo:String(product.codigo||'').trim(),
     descricaoPublica:String(product.descricaoPublica||product.descricao||'').trim(),
     preco:product.preco==null||product.preco===''?'':Number(product.preco)||0,
+    blackFridayAtiva:category==='Portão'&&product.blackFridayAtiva===true,
+    precoBlackFriday:optionalMoney(product.precoBlackFriday),
     promocaoAtiva:promotion,
     precoPromocional:product.precoPromocional==null||product.precoPromocional===''?'':Number(product.precoPromocional)||0,
     freteGratisCuiaba:Boolean(promotion&&product.freteGratisCuiaba),
@@ -346,6 +348,27 @@ async function route(context){
     const products=(state.produtos||[]).filter(p=>!p.arquivado && p.siteAtivo!==false && p.status!=='indisponivel').sort((a,b)=>(Number(a.ordem)||999)-(Number(b.ordem)||999));
     const empresa={...state.empresa};
     return json({empresa,products});
+  }
+
+  // Black Friday: somente portões escolhidos no painel atual e no mesmo D1.
+  // A API não expõe outros registros do painel ou preços não promocionais.
+  if(path==='black-friday' && method==='GET'){
+    const state=await getState(context.env.DB);
+    const produtos=(state.produtos||[]).filter(p=>
+      p.categoria==='Portão' && p.blackFridayAtiva===true && !p.arquivado &&
+      p.siteAtivo!==false && p.status!=='indisponivel' && Boolean(p.imagem) &&
+      Number(p.preco)>0 && Number(p.precoBlackFriday)>0 &&
+      Number(p.precoBlackFriday)<Number(p.preco)
+    ).sort((a,b)=>(Number(a.ordem)||999)-(Number(b.ordem)||999))
+     .map(p=>({
+       id:p.id,codigo:p.codigo,categoria:p.categoria,
+       nome:p.nome||`Portão ${p.codigo}`,
+       descricao:p.descricaoPublica||p.descricao||'',
+       imagem:p.imagem,precoAnterior:Number(p.preco),
+       precoPromocional:Number(p.precoBlackFriday)
+     }));
+    const whatsapp=String(state.empresa?.whatsapp||'556536844696').replace(/\D/g,'');
+    return json({produtos,whatsapp});
   }
 
   if(path==='track' && method==='POST'){

@@ -154,4 +154,19 @@ assert.ok(panelSource.includes("state:{empresa:nextCompany}"));
 assert.ok(panelSource.includes("state:{produtos:state.produtos}"));
 assert.doesNotMatch(publicSource.toLowerCase(),/duas fechaduras|três fechaduras|3 fechaduras/);
 
-console.log('Regressão concluída: adicionais, dados antigos e fluxos preservados.');
+
+// Black Friday: não altera promoção normal, usuários nem produtos antigos.
+const bfGate=normalize({id:'bf1',categoria:'Portão',codigo:'POR-0042',preco:4000,precoPromocional:3800,promocaoAtiva:true,blackFridayAtiva:true,precoBlackFriday:3100,imagem:'gate.webp'});
+assert.equal(bfGate.blackFridayAtiva,true);
+assert.equal(bfGate.precoBlackFriday,3100);
+assert.equal(bfGate.precoPromocional,3800);
+assert.equal(normalize({categoria:'Porta',blackFridayAtiva:true,precoBlackFriday:900}).blackFridayAtiva,false);
+assert.equal(normalize({categoria:'Portão',preco:2500}).blackFridayAtiva,false);
+assert.ok(apiSource.includes("path==='black-friday'"));
+assert.ok(panelSource.includes('pBlackFridayPrice'));
+assert.ok(panelSource.includes('pBlackFriday'));
+assert.ok(read('public/index.html').includes('href="/black-friday/"'));
+assert.ok(read('public/black-friday/index.html').includes('neia_transparente_1080p.webm'));
+assert.doesNotMatch(read('public/black-friday/index.html'),/href="\/(estruturas|contato|catalogo)"/);
+
+console.log('Regressão concluída: catálogo, usuários, dados antigos e Black Friday.');
