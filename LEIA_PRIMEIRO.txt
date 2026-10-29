@@ -1,0 +1,12 @@
+CORREÇÃO APENAS PARA IPHONE — Black Friday Universal V13
+
+Se a versão completa com painel já está publicada, envie somente a pasta public deste ZIP (a partir da RAIZ do repositório). Preserva todo o restante do site, painel, produtos e banco D1.
+
+Confira na tela de upload:
+public/black-friday/index.html
+public/black-friday/styles.css
+public/black-friday/app.js
+public/black-friday/assets/cenario_mobile_aprovado_v13.jpg
+public/black-friday/assets/safari_mobile_v13.mp4
+
+Depois de publicar, feche a aba antiga no iPhone e abra https://universalserralheria.com.br/black-friday/ numa aba nova.

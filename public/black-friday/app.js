@@ -8,7 +8,7 @@
   const player=isSafari?fallback:video;
   if(isSafari){
     const mobile=matchMedia('(max-width:680px)').matches;
-    fallback.src=mobile?'assets/safari_mobile_v11.mp4':'assets/safari_desktop_v11.mp4';
+    fallback.src=mobile?'assets/safari_mobile_v13.mp4':'assets/safari_desktop_v11.mp4';
   }
   const play=document.getElementById('playVideo');
   const status=document.getElementById('status');
