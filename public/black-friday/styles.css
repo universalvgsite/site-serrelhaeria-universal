@@ -123,3 +123,18 @@
   .scene .subject{width:68.4615%;left:-7.6923%;top:-19.1781%;transform:none;max-width:none;height:auto;}
   .scene .play{left:24.5%;top:59%;width:62px;height:62px;}
 }
+
+/* Black Friday: links individuais para cada modelo, sem interferir no vídeo e no painel. */
+.card-photo-link{position:relative;display:block;background:#050505;cursor:zoom-in;outline-offset:-3px}
+.card-photo-link img{transition:transform .17s ease}
+.card-photo-link:hover img{transform:scale(1.02)}
+.photo-hint{position:absolute;bottom:7px;left:8px;right:8px;background:#060606de;color:#fff;border:1px solid #bd8a36;border-radius:6px;padding:7px 3px;text-align:center;font-size:10px;letter-spacing:.02em;font-weight:800}
+.card-title-link:hover{color:#f8ca69;text-decoration:underline}
+.product-code{font-size:11px;color:#e9bd68;margin:0 0 10px}
+.card-actions{display:flex;flex-direction:column;gap:8px}
+.details-button{display:block;background:#191610;color:#ffda8c;border:1px solid #c49a49;border-radius:7px;font-weight:900;text-align:center;padding:12px 7px;font-size:13px}
+.details-button:hover{background:#29200f}
+.card-actions .wa-button{font-size:13px;padding:12px 7px}
+.copy-link-button{display:block;background:transparent;color:#d8c5a2;border:1px solid #53442f;border-radius:7px;font-size:11px;font-weight:800;letter-spacing:.02em;padding:9px 6px;min-height:36px}
+.copy-link-button:hover{color:#ffe0a2;border-color:#e7b348}
+@media(max-width:680px){.photo-hint{font-size:8px;left:4px;right:4px}.details-button,.card-actions .wa-button{font-size:11px;padding:11px 5px}.copy-link-button{font-size:9px}.card .product-code{font-size:10px}}

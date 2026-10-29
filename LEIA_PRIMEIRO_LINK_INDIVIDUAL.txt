@@ -1,0 +1,32 @@
+SERRALHERIA UNIVERSAL — BLACK FRIDAY — LINK INDIVIDUAL E FOTO AMPLIADA
+
+Esta é uma ATUALIZAÇÃO PEQUENA sobre a versão mobile V15 já publicada.
+
+O que muda:
+- No catálogo da Black Friday, tocar na FOTO, no NOME ou em VER FOTOS, PREÇO E COMPRAR abre a página individual do produto. Não redireciona diretamente ao WhatsApp.
+- O endereço é /black-friday/produto/?id=ID-DO-PRODUTO e pode ser compartilhado.
+- A página individual mostra uma imagem GRANDE, código, descrição e preço normal/promocional.
+- Tocar na imagem abre uma visualização em tela cheia com botões + e − (100 a 300%) para ver detalhes do portão.
+- Só na página individual o cliente clica COMPRAR PELO WHATSAPP: o vendedor recebe nome, código, valor promocional, link exclusivo e origem Black Friday 2026.
+- O botão COPIAR LINK permite ao vendedor compartilhar o produto.
+- Se a campanha for encerrada ou o produto removido, a página individual informa que a oferta não está mais disponível.
+- Preserva o cenário e vídeo já publicados; não altera o painel, usuarios, base D1, preços, métricas atuais, nem imagens armazenadas.
+
+PUBLICAÇÃO
+1. Faça backup do repositório se ainda não fez.
+2. Extraia este ZIP; abra o repositório do GitHub na branch main, na RAIZ do projeto.
+3. Clique Add file > Upload files e arraste a pasta public (NÃO o ZIP fechado).
+4. Confirme no upload os caminhos:
+   public/black-friday/index.html
+   public/black-friday/app.js
+   public/black-friday/styles.css
+   public/black-friday/produto/index.html
+   public/black-friday/produto/app.js
+   public/black-friday/produto/styles.css
+5. Faça Commit changes e aguarde Cloudflare concluir.
+6. No celular, abra a Black Friday, toque na foto de uma oferta, toque na foto maior, use + para ampliar, feche e teste Comprar pelo WhatsApp.
+7. Teste Copiar link, cole num navegador privado e confirme que abriu EXATAMENTE aquele produto.
+
+AVISO: não importe backup SQL e não execute schema.sql.
+OBS: A página só mostra produtos ativos e habilitados na campanha pelo painel.
+OBS: o preview automático do link em apps de mensagens pode ser genérico; ao abrir o link a pessoa verá o produto correto.

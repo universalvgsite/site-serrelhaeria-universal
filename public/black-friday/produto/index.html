@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#080807">
+<meta name="description" content="Conheça as fotos, características e o preço da Black Friday de um produto da Serralheria Universal. Compartilhe o link individual e compre pelo WhatsApp.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Serralheria Universal">
+<meta property="og:title" content="Produto em oferta | Black Friday Universal 2026">
+<meta property="og:description" content="Confira a foto, o modelo e o preço especial da Black Friday Universal.">
+<meta property="og:image" content="https://universalserralheria.com.br/black-friday/assets/cenario_original_aprovado_v11.jpg">
+<title>Produto em oferta | Black Friday Universal</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="styles.css?v=16a">
+<script src="app.js?v=16a" defer></script>
+</head>
+<body>
+<header class="header">
+  <a class="brand" href="/black-friday/" aria-label="Voltar à Black Friday Universal"><img src="../assets/logo_aprovada_v11.png" alt="Serralheria e Metalúrgica Universal"></a>
+  <a class="header-link" href="/black-friday/#ofertas">BLACK FRIDAY <b>2026</b></a>
+</header>
+<main class="container">
+<nav class="breadcrumb" aria-label="Localização"><a href="/black-friday/#ofertas">← VOLTAR ÀS OFERTAS</a></nav>
+<div id="loading" class="message" role="status">Carregando os detalhes do produto...</div>
+<section id="product" class="product" hidden aria-label="Detalhes do produto">
+  <div class="image-column">
+    <span class="promo-label">BLACK FRIDAY 2026</span>
+    <button id="openImage" class="image-button" type="button" aria-label="Ampliar a foto do produto">
+      <img id="productImage" alt="Imagem do produto">
+      <span class="zoom-hint">⌕ AMPLIAR FOTO</span>
+    </button>
+    <p class="image-caption">Toque na imagem para visualizar em tamanho maior.</p>
+  </div>
+  <div class="info-column">
+    <div id="category" class="category"></div>
+    <h1 id="productName"></h1>
+    <p id="productCode" class="product-code"></p>
+    <p id="productDescription" class="description"></p>
+    <div class="price-box">
+      <div id="oldPrice" class="old-price"></div>
+      <div class="price-caption">PREÇO BLACK FRIDAY</div>
+      <div id="newPrice" class="new-price"></div>
+      <p class="value-note">Valor anunciado para o modelo selecionado. Consulte a disponibilidade com a equipe.</p>
+    </div>
+    <a id="buy" class="buy-button" href="#" target="_blank" rel="noopener noreferrer">COMPRAR PELO WHATSAPP <span aria-hidden="true">↗</span></a>
+    <button id="copyLink" class="copy-button" type="button">COPIAR LINK INDIVIDUAL DESTE PRODUTO</button>
+    <p id="copyFeedback" class="feedback" role="status"></p>
+    <p class="security-note">Sua mensagem de compra incluirá o nome, código, valor promocional e link desta página para o vendedor identificar exatamente o produto.</p>
+  </div>
+</section>
+</main>
+<dialog id="lightbox" class="lightbox" aria-label="Foto ampliada do produto">
+  <div class="lightbox-inner">
+    <div class="lightbox-toolbar">
+      <strong>FOTO DO PRODUTO</strong>
+      <button id="zoomOut" class="zoom-button" type="button" aria-label="Diminuir zoom">−</button>
+      <span id="zoomLevel" aria-live="polite">100%</span>
+      <button id="zoomIn" class="zoom-button" type="button" aria-label="Aumentar zoom">+</button>
+      <button id="closeImage" class="close-image" type="button" aria-label="Fechar foto ampliada">✕ FECHAR</button>
+    </div>
+    <div id="zoomViewer" class="zoom-viewer"><img id="fullImage" alt="Foto ampliada do produto"></div>
+    <p class="zoom-help">Use + ou − para ampliar e arraste a imagem para examinar o modelo.</p>
+  </div>
+</dialog>
+<footer>© 2026 Serralheria e Metalúrgica Universal · Fabricação própria</footer>
+</body>
+</html>
