@@ -8,7 +8,7 @@
   const player=isSafari?fallback:video;
   if(isSafari){
     const mobile=matchMedia('(max-width:680px)').matches;
-    fallback.src=mobile?'assets/safari_mobile.mp4':'assets/safari_desktop.mp4';
+    fallback.src=mobile?'assets/safari_mobile_v11.mp4':'assets/safari_desktop_v11.mp4';
   }
   const play=document.getElementById('playVideo');
   const status=document.getElementById('status');
@@ -54,11 +54,20 @@
     const a=elt('a','wa-button','QUERO ESTA OFERTA');a.href=whatsApp(p);a.target='_blank';a.rel='noopener noreferrer';
     a.setAttribute('aria-label',`Consultar ${p.nome} pelo WhatsApp`);a.addEventListener('click',()=>track('whatsapp_click',p.id));body.appendChild(a);article.appendChild(body);return article;
   }
+  function showCampaignEnded(){
+    try{player.pause()}catch{}
+    document.body.classList.add('campaign-ended');
+    const main=document.querySelector('main');if(main)main.hidden=true;
+    const message=document.getElementById('campaignEnded');if(message)message.hidden=false;
+    cards.replaceChildren();
+    status.hidden=true;
+  }
   async function loadOffers(){
     try{
       const response=await fetch('/api/black-friday',{cache:'no-store'});
       if(!response.ok)throw new Error('API indisponível');
       const data=await response.json();
+      if(data?.ativa===false){showCampaignEnded();return;}
       const items=Array.isArray(data?.produtos)?data.produtos:[];
       phone=String(data?.whatsapp||'556536844696').replace(/\D/g,'')||'556536844696';
       const selected=items.filter(p=>p && ['Portão','Porta','Lixeira'].includes(p.categoria) && p.nome && p.imagem && Number(p.precoPromocional)>0);

@@ -18,7 +18,8 @@ const DEFAULT_STATE = {
     adicionalPortaoSocial: '',
     adicionalFechaduraTetra: '',
     ga4Id: '',
-    metaPixelId: ''
+    metaPixelId: '',
+    blackFridayPaginaAtiva: true
   },
   clientes: [],
   vendedores: [],
@@ -71,7 +72,8 @@ function normalizeCompany(company={}){
   return {
     ...company,
     adicionalPortaoSocial:optionalMoney(company.adicionalPortaoSocial),
-    adicionalFechaduraTetra:optionalMoney(company.adicionalFechaduraTetra)
+    adicionalFechaduraTetra:optionalMoney(company.adicionalFechaduraTetra),
+    blackFridayPaginaAtiva:company.blackFridayPaginaAtiva!==false
   };
 }
 function normalizeProduct(product={},index=0){
@@ -350,11 +352,19 @@ async function route(context){
     return json({empresa,products});
   }
 
+  // Status público sem informações administrativas. Lido também no site principal
+  // para ocultar os links da campanha quando ela for desligada no painel.
+  if(path==='black-friday/status' && method==='GET'){
+    const state=await getState(context.env.DB);
+    return json({ativa:state.empresa?.blackFridayPaginaAtiva!==false});
+  }
+
   // Black Friday: somente os produtos selecionados no painel e no mesmo D1.
   // A API não expõe outros registros do painel ou preços não promocionais.
   if(path==='black-friday' && method==='GET'){
     const state=await getState(context.env.DB);
-    const produtos=(state.produtos||[]).filter(p=>
+    const ativa=state.empresa?.blackFridayPaginaAtiva!==false;
+    const produtos=(!ativa?[]:(state.produtos||[])).filter(p=>
       ['Portão','Porta','Lixeira'].includes(p.categoria) && p.blackFridayAtiva===true && !p.arquivado &&
       p.siteAtivo!==false && p.status!=='indisponivel' && Boolean(p.imagem) &&
       Number(p.preco)>0 && Number(p.precoBlackFriday)>0 &&
@@ -368,7 +378,7 @@ async function route(context){
        precoPromocional:Number(p.precoBlackFriday)
      }));
     const whatsapp=String(state.empresa?.whatsapp||'556536844696').replace(/\D/g,'');
-    return json({produtos,whatsapp});
+    return json({ativa,produtos,whatsapp});
   }
 
   if(path==='track' && method==='POST'){

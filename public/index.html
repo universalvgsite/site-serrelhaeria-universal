@@ -106,5 +106,20 @@
 
   <dialog id="productModal" class="modal"><div class="modalBox"><button class="close" id="closeModal" aria-label="Fechar">×</button><div id="modalBody"></div></div></dialog>
   <script src="/app.js?v=25" defer></script>
+  <script>
+  // A campanha pode ser encerrada no painel, sem alterar o catálogo ou a URL do site.
+  (async function(){
+    try{
+      const response=await fetch('/api/black-friday/status',{cache:'no-store'});
+      if(!response.ok)return;
+      const data=await response.json();
+      if(data.ativa===false){
+        document.querySelectorAll('.bfMenuLink,.bfSiteButton').forEach(el=>{
+          el.hidden=true;el.style.setProperty('display','none','important');
+        });
+      }
+    }catch(err){/* outras funcionalidades do site permanecem independentes */}
+  })();
+  </script>
 </body>
 </html>
