@@ -116,3 +116,10 @@
   .scene .subject{width:68.4615%;left:-7.6923%;top:-41.0959%;transform:none;max-width:none;height:auto;}
   .scene .play{left:24.5%;top:43%;width:62px;height:62px;}
 }
+
+/* UNIVERSAL MOBILE V15 — alinhamento final aprovado: abaixa Neia sem mudar escala,
+   cenário, cores, vídeo, produtos ou contadores. Corresponde ao MP4 Safari V15. */
+@media (max-width:680px){
+  .scene .subject{width:68.4615%;left:-7.6923%;top:-19.1781%;transform:none;max-width:none;height:auto;}
+  .scene .play{left:24.5%;top:59%;width:62px;height:62px;}
+}

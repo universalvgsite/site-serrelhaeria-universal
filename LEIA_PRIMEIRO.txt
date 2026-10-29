@@ -1,12 +1,22 @@
-CORREÇÃO APENAS PARA IPHONE — Black Friday Universal V13
+BLACK FRIDAY UNIVERSAL — CORREÇÃO MOBILE V15 (NEIA MAIS BAIXA)
 
-Se a versão completa com painel já está publicada, envie somente a pasta public deste ZIP (a partir da RAIZ do repositório). Preserva todo o restante do site, painel, produtos e banco D1.
+O que foi corrigido:
+- Neia deslocada aproximadamente 80 pixels para baixo no cenário base de 390 x 365 pixels.
+- Tamanho e posição horizontal preservados: letreiro BLACK FRIDAY / OFERTAS ESPECIAIS continua visível.
+- Vídeo MP4 Safari/iPhone reprocessado com a nova posição durante toda a reprodução, com áudio.
+- Pôster e vídeo WebM transparente em outros navegadores usam a mesma posição por CSS.
+- Botão de reprodução realinhado para aparecer sobre o tronco, e não sobre o rosto.
 
-Confira na tela de upload:
-public/black-friday/index.html
-public/black-friday/styles.css
-public/black-friday/app.js
-public/black-friday/assets/cenario_mobile_aprovado_v13.jpg
-public/black-friday/assets/safari_mobile_v13.mp4
+Este é um PATCH INCREMENTAL sobre a versão V14 já publicada.
+NÃO altera painel, Cloudflare D1, métricas, cadastros, promoções ou versão desktop.
 
-Depois de publicar, feche a aba antiga no iPhone e abra https://universalserralheria.com.br/black-friday/ numa aba nova.
+PUBLICAÇÃO NO GITHUB
+1. Extraia este ZIP.
+2. Abra a RAIZ do repositório na branch main.
+3. Clique Add file > Upload files.
+4. Envie a pasta public, preservando o caminho public/black-friday/.
+5. Confirme o arquivo public/black-friday/assets/safari_mobile_v15.mp4 e os outros arquivos.
+6. Commit changes; verifique deployment verde no Cloudflare Pages.
+7. No iPhone, abra uma nova aba para https://universalserralheria.com.br/black-friday/
+
+Não suba o ZIP fechado, não apague arquivos antigos e não importe o SQL.
