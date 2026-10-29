@@ -1,0 +1,25 @@
+UNIVERSAL — BLACK FRIDAY 2026 — ATUALIZAÇÃO FINAL
+
+1. Este pacote contém SOMENTE os arquivos que devem ser atualizados.
+2. Faça a extração do ZIP no computador. Dentro da pasta extraída estão as pastas public e functions.
+3. No GitHub, abra a RAIZ do repositório universalsvgsite/site-serrelhaeria-universal, branch main.
+4. Clique Add file > Upload files e arraste AS PASTAS public e functions DE DENTRO da pasta extraída.
+5. Na lista de upload, CONFIRA caminhos como:
+   public/black-friday/index.html
+   public/black-friday/assets/fachada_aprovada.jpg
+   public/black-friday/assets/safari_mobile.mp4
+   public/painel/app.js
+   public/painel/index.html
+   functions/api/[[path]].js
+6. Clique Commit changes apenas após conferir a lista. Espere o Cloudflare Pages mostrar Success.
+7. Se o painel mostrar versão antiga, atualize com Ctrl+F5 (no iPhone feche a aba e abra novamente).
+8. NO PAINEL: menu BLACK FRIDAY > escolher produtos (portão, porta ou lixeira) > valor de oferta > SALVAR BLACK FRIDAY.
+9. PAINEL: no menu BLACK FRIDAY consulte os acessos e cliques da campanha. O Resumo mantém o contador geral e da bio.
+10. NÃO execute schema.sql nem importe o backup SQL; o mesmo banco D1 universal-db é utilizado.
+11. Produtos, usuários, orçamentos e histórico permanecem no D1; este pacote não contém scripts de limpeza.
+12. A imagem de cenário é baseada na referência aprovada com menus superiores removidos.
+13. O vídeo no iPhone é um MP4 composto; no Chrome/desktop usa WebM transparente.
+14. Para voltar atrás, reverta o commit no GitHub. Guarde o ZIP do site e o SQL de backup separadamente.
+15. URL oficial limpa: https://universalserralheria.com.br/black-friday/
+
+Importante: confirme visualmente login, catálogo, ofertas, WhatsApp e contadores após a publicação.

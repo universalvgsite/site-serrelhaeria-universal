@@ -35,7 +35,7 @@
   function whatsApp(p){
     const name=(p.nome||'').trim();
     const code=p.codigo?` (código ${p.codigo})`:'';
-    const text=`Olá! Tenho interesse no portão ${name}${code} anunciado na Black Friday da Serralheria Universal. Gostaria de confirmar o valor promocional e a disponibilidade.\n\nOrigem: Black Friday 2026 – Landing Page`;
+    const text=`Olá! Tenho interesse no produto ${name}${code} anunciado na Black Friday da Serralheria Universal. Gostaria de confirmar o valor promocional e a disponibilidade.\n\nOrigem: Black Friday 2026 – Landing Page`;
     return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
   }
   const brl=value=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(value);
@@ -43,7 +43,7 @@
   function makeCard(p){
     const article=elt('article','card');
     article.appendChild(elt('div','card-tag','BLACK FRIDAY'));
-    const img=elt('img','photo');img.src=p.imagem;img.alt=`Portão ${p.nome}`;img.loading='lazy';img.decoding='async';article.appendChild(img);
+    const img=elt('img','photo');img.src=p.imagem;img.alt=`${p.nome}`;img.loading='lazy';img.decoding='async';article.appendChild(img);
     const body=elt('div','card-body');body.appendChild(elt('h2','',p.nome));
     if(p.descricao) body.appendChild(elt('p','spec',p.descricao));
     if(Number.isFinite(p.precoPromocional) && p.precoPromocional>0){
@@ -51,8 +51,8 @@
       if(Number.isFinite(p.precoAnterior)&&p.precoAnterior>p.precoPromocional)prices.appendChild(elt('span','old-price',brl(p.precoAnterior)));
       prices.appendChild(elt('span','new-price',brl(p.precoPromocional)));body.appendChild(prices);
     }
-    const a=elt('a','wa-button','QUERO ESSE PORTÃO');a.href=whatsApp(p);a.target='_blank';a.rel='noopener noreferrer';
-    a.setAttribute('aria-label',`Consultar portão ${p.nome} pelo WhatsApp`);a.addEventListener('click',()=>track('whatsapp_click',p.id));body.appendChild(a);article.appendChild(body);return article;
+    const a=elt('a','wa-button','QUERO ESTA OFERTA');a.href=whatsApp(p);a.target='_blank';a.rel='noopener noreferrer';
+    a.setAttribute('aria-label',`Consultar ${p.nome} pelo WhatsApp`);a.addEventListener('click',()=>track('whatsapp_click',p.id));body.appendChild(a);article.appendChild(body);return article;
   }
   async function loadOffers(){
     try{
@@ -61,13 +61,13 @@
       const data=await response.json();
       const items=Array.isArray(data?.produtos)?data.produtos:[];
       phone=String(data?.whatsapp||'556536844696').replace(/\D/g,'')||'556536844696';
-      const selected=items.filter(p=>p && p.categoria==='Portão' && p.nome && p.imagem && Number(p.precoPromocional)>0);
+      const selected=items.filter(p=>p && ['Portão','Porta','Lixeira'].includes(p.categoria) && p.nome && p.imagem && Number(p.precoPromocional)>0);
       cards.replaceChildren(...selected.map(makeCard));
       if(selected.length)status.hidden=true;
-      else{status.hidden=false;status.textContent='Em breve: os portões selecionados para a Black Friday aparecerão aqui.';}
+      else{status.hidden=false;status.textContent='Em breve: os produtos selecionados para a Black Friday aparecerão aqui.';}
     }catch{
       status.hidden=false;
-      status.textContent='Os modelos participantes serão publicados em breve. Nenhum produto foi cadastrado nesta prévia.';
+      status.textContent='Não foi possível carregar as ofertas no momento. Tente novamente em instantes.';
     }
   }
   function track(eventType,productId=''){
@@ -80,5 +80,12 @@
     }catch{} // falha no registro nunca deve impedir abrir o WhatsApp
   }
   track('visit');
+  try {
+    const address=new URL(location.href);
+    if(address.searchParams.get('utm_source')==='chatgpt.com'){
+      address.searchParams.delete('utm_source');
+      history.replaceState(null,'',address.pathname+address.search+address.hash);
+    }
+  } catch {}
   loadOffers();
 })();

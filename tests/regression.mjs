@@ -160,7 +160,8 @@ const bfGate=normalize({id:'bf1',categoria:'Portão',codigo:'POR-0042',preco:400
 assert.equal(bfGate.blackFridayAtiva,true);
 assert.equal(bfGate.precoBlackFriday,3100);
 assert.equal(bfGate.precoPromocional,3800);
-assert.equal(normalize({categoria:'Porta',blackFridayAtiva:true,precoBlackFriday:900}).blackFridayAtiva,false);
+assert.equal(normalize({categoria:'Porta',blackFridayAtiva:true,precoBlackFriday:900}).blackFridayAtiva,true);
+assert.equal(normalize({categoria:'Lixeira',blackFridayAtiva:true,precoBlackFriday:300}).blackFridayAtiva,true);
 assert.equal(normalize({categoria:'Portão',preco:2500}).blackFridayAtiva,false);
 assert.ok(apiSource.includes("path==='black-friday'"));
 assert.ok(panelSource.includes('pBlackFridayPrice'));
@@ -169,4 +170,7 @@ assert.ok(read('public/index.html').includes('href="/black-friday/"'));
 assert.ok(read('public/black-friday/index.html').includes('neia_transparente_1080p.webm'));
 assert.doesNotMatch(read('public/black-friday/index.html'),/href="\/(estruturas|contato|catalogo)"/);
 
-console.log('Regressão concluída: catálogo, usuários, dados antigos e Black Friday.');
+assert.ok(panelSource.includes('function renderBlackFriday'));
+assert.ok(panelSource.includes('bfWhatsappClicks'));
+assert.ok(apiSource.includes("campaign='black_friday_2026'"));
+console.log('Regressão concluída: catálogo, usuários, dados antigos, Black Friday multcategoria e métricas.');

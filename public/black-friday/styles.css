@@ -4,3 +4,50 @@
 .fallback-video{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;z-index:2;visibility:hidden;pointer-events:none}
 .scene.fallback-mode .fallback-video{visibility:visible}
 .scene.fallback-mode #neiaPoster,.scene.fallback-mode #neiaVideo{visibility:hidden}
+
+/* Ajuste mobile: proporção da Neia, cenário inteiro e informações visíveis.
+   Não altera o layout desktop ou as funcionalidades do painel. */
+@media (max-width:680px){
+ .scene{width:100%;height:auto;aspect-ratio:390/530;background-image:url('assets/fachada_mobile.jpg');background-size:100% 100%;background-position:center;background-repeat:no-repeat;}
+ .scene:after{inset:auto 0 0;height:22%;background:linear-gradient(transparent,#030303bb);z-index:1;}
+ .subject{width:96.153846%;left:45.5%;top:-26.981%;height:auto;max-width:none;transform:translateX(-50%);}
+ .play{left:33%;top:63%;width:clamp(55px,17vw,72px);height:clamp(55px,17vw,72px);border-width:3px;}
+ .mobile-claim{display:block;left:3%;right:3%;bottom:1.5%;padding:2px 5px;text-align:center;background:linear-gradient(90deg,transparent,#050505e5 15%,#050505e5 85%,transparent);z-index:3;}
+ .mobile-claim img{display:none;}
+ .mobile-claim .mobile-black{font-size:clamp(23px,7.4vw,32px);margin:1px 0 4px;line-height:1.05;}
+ .mobile-claim .mobile-promo{font-size:clamp(13px,4.6vw,18px);padding:4px;border:1px solid #c99531;margin:0 auto 4px;max-width:92%;}
+ .mobile-claim p{font-size:clamp(8px,2.4vw,10px);line-height:1.3;margin:1px 0;}
+ .fallback-video{width:100%;height:100%;object-fit:fill;}
+ .benefits{gap:0;}
+}
+@media (max-width:385px){
+ .scene{height:auto;aspect-ratio:390/530;}
+ .subject{width:96.153846%;top:-26.981%;}
+ .play{left:33%;top:63%;}
+ .mobile-claim .mobile-black{font-size:clamp(21px,7.4vw,28px);}
+}
+
+/* BLACK FRIDAY 2026: composição visual aprovada, sem menu do site nem produtos fictícios. */
+@media (min-width:681px){
+ .frame{max-width:1448px}
+ .top-inner{max-width:1448px}
+ .scene{width:100%;max-width:1448px;aspect-ratio:1448/455;background-image:url('assets/fachada_aprovada.jpg');background-size:100% 100%;background-position:center;box-shadow:none}
+ .scene .hero-brand,.scene .right-claim{display:none!important}
+ .subject{width:46.3%;left:7.0%;top:-88.8%;height:auto;transform:none}
+ .play{left:29.5%;top:60%;}
+ .scene .right-detail{left:55%;top:84%;width:43%;font-size:clamp(11px,1.26vw,18px);background:linear-gradient(90deg,transparent,#050606d9 10%,#050606d9 90%,transparent)}
+ .benefits{max-width:1448px}
+ .gold-cta-wrap{max-width:1448px}
+ .offers{max-width:1448px}
+}
+@media (max-width:680px){
+ .hero .hero-brand,.hero .right-claim,.hero .right-detail{display:none!important}
+ .mobile-claim .mobile-black{display:none!important}
+ .mobile-claim .mobile-promo{font-size:clamp(15px,5vw,19px);font-weight:950;color:#ffd369}
+ .mobile-claim p:last-child{color:#fff}
+ .scene{height:auto;aspect-ratio:390/530;}
+ .subject{width:96.153846%;left:45.5%;top:-26.981%;transform:translateX(-50%);height:auto;}
+ .play{left:33%;top:63%;}
+ .top-detail{white-space:nowrap}
+}
+/* a área de produtos é populada somente pela API, nunca por imagens estáticas */

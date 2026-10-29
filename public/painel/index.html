@@ -8,7 +8,7 @@
   <title>Universal | Painel do Catálogo</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/painel/styles.css?v=25">
-  <link rel="stylesheet" href="/painel/black-friday.css?v=1">
+  <link rel="stylesheet" href="/painel/black-friday.css?v=7">
 </head>
 <body>
   <section id="authScreen" class="loginScreen">
@@ -46,6 +46,9 @@
         <button class="navBtn" data-view="produtos">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 13 11 22l-9-9V3h10z"/><circle cx="7" cy="8" r="1.5"/></svg><span>Produtos</span>
         </button>
+        <button class="navBtn" data-view="blackFriday">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h18v12H3zM2 9l3-6h14l3 6M12 3v18M3 13h18"/></svg><span>Black Friday</span>
+        </button>
         <button class="navBtn adminOnly" data-view="usuarios">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="7" r="4"/><path d="M2 21v-2a6 6 0 0 1 12 0v2M16 11h6M19 8v6"/></svg><span>Usuários</span>
         </button>
@@ -60,12 +63,13 @@
       </header>
       <section id="view-dashboard" class="view active"></section>
       <section id="view-produtos" class="view"></section>
+      <section id="view-blackFriday" class="view"></section>
       <section id="view-usuarios" class="view"></section>
     </main>
   </div>
 
   <dialog id="modal" class="modal"><div id="modalContent"></div></dialog>
   <div id="toast" class="toast" role="status"></div>
-  <script src="/painel/app.js?v=25" defer></script>
+  <script src="/painel/app.js?v=31" defer></script>
 </body>
 </html>

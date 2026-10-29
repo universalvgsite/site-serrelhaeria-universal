@@ -87,7 +87,7 @@ function normalizeProduct(product={},index=0){
     codigo:String(product.codigo||'').trim(),
     descricaoPublica:String(product.descricaoPublica||product.descricao||'').trim(),
     preco:product.preco==null||product.preco===''?'':Number(product.preco)||0,
-    blackFridayAtiva:category==='Portão'&&product.blackFridayAtiva===true,
+    blackFridayAtiva:product.blackFridayAtiva===true,
     precoBlackFriday:optionalMoney(product.precoBlackFriday),
     promocaoAtiva:promotion,
     precoPromocional:product.precoPromocional==null||product.precoPromocional===''?'':Number(product.precoPromocional)||0,
@@ -350,19 +350,19 @@ async function route(context){
     return json({empresa,products});
   }
 
-  // Black Friday: somente portões escolhidos no painel atual e no mesmo D1.
+  // Black Friday: somente os produtos selecionados no painel e no mesmo D1.
   // A API não expõe outros registros do painel ou preços não promocionais.
   if(path==='black-friday' && method==='GET'){
     const state=await getState(context.env.DB);
     const produtos=(state.produtos||[]).filter(p=>
-      p.categoria==='Portão' && p.blackFridayAtiva===true && !p.arquivado &&
+      ['Portão','Porta','Lixeira'].includes(p.categoria) && p.blackFridayAtiva===true && !p.arquivado &&
       p.siteAtivo!==false && p.status!=='indisponivel' && Boolean(p.imagem) &&
       Number(p.preco)>0 && Number(p.precoBlackFriday)>0 &&
       Number(p.precoBlackFriday)<Number(p.preco)
     ).sort((a,b)=>(Number(a.ordem)||999)-(Number(b.ordem)||999))
      .map(p=>({
        id:p.id,codigo:p.codigo,categoria:p.categoria,
-       nome:p.nome||`Portão ${p.codigo}`,
+       nome:p.nome||`${p.categoria} ${p.codigo}`,
        descricao:p.descricaoPublica||p.descricao||'',
        imagem:p.imagem,precoAnterior:Number(p.preco),
        precoPromocional:Number(p.precoBlackFriday)
@@ -419,33 +419,35 @@ async function route(context){
     const params=new URL(req.url).searchParams;
     const from=/^\d{4}-\d{2}-\d{2}$/.test(params.get('from')||'')?params.get('from'):'';
     const to=/^\d{4}-\d{2}-\d{2}$/.test(params.get('to')||'')?params.get('to'):'';
-    const dateFilter=from&&to?` AND date(created_at,'-3 hours') BETWEEN ? AND ?`:'';
+    if(from&&to&&from>to) return json({error:'Período inválido.'},400);
+    const dateFilter=from&&to?` AND date(created_at,'-4 hours') BETWEEN ? AND ?`:'';
     const dateParams=from&&to?[from,to]:[];
     const bio=`source='instagram' AND medium='bio' AND campaign='link_bio'`;
-    const count=async(eventType,scope='',extra='',extraParams=[])=>context.env.DB.prepare(`SELECT COUNT(*) total FROM tracking_events WHERE event_type=? ${scope?'AND '+scope:''}${extra}`).bind(eventType,...extraParams).first();
-    const todayFilter=` AND date(created_at,'-3 hours')=date('now','-3 hours')`;
-    const weekFilter=` AND date(created_at,'-3 hours')>=date('now','-3 hours','-6 days')`;
-    const monthFilter=` AND date(created_at,'-3 hours')>=date('now','-3 hours','start of month')`;
-    const [today,week,month,total,period,whatsapp,bioToday,bioWeek,bioMonth,bioTotal,bioPeriod,bioWhatsapp]=await Promise.all([
-      count('page_view','',''+todayFilter),
-      count('page_view','',''+weekFilter),
-      count('page_view','',''+monthFilter),
-      count('page_view'),
-      count('page_view','',dateFilter,dateParams),
-      count('whatsapp_click','',dateFilter,dateParams),
-      count('page_view',bio,todayFilter),
-      count('page_view',bio,weekFilter),
-      count('page_view',bio,monthFilter),
-      count('page_view',bio),
-      count('page_view',bio,dateFilter,dateParams),
-      count('whatsapp_click',bio,dateFilter,dateParams)
+    const bf=`campaign='black_friday_2026'`;
+    const generalPage=`(event_type='page_view' OR (event_type='visit' AND campaign='black_friday_2026'))`;
+    const count=async(scope,extra='',params=[])=>{
+      const stmt=context.env.DB.prepare(`SELECT COUNT(*) total FROM tracking_events WHERE ${scope}${extra}`);
+      const row=await (params.length?stmt.bind(...params):stmt).first();
+      return Number(row?.total||0);
+    };
+    // Horário local de Mato Grosso: UTC-4.
+    const today=` AND date(created_at,'-4 hours')=date('now','-4 hours')`;
+    const week=` AND date(created_at,'-4 hours')>=date('now','-4 hours','-6 days')`;
+    const month=` AND date(created_at,'-4 hours')>=date('now','-4 hours','start of month')`;
+    const bfVisit=`event_type='visit' AND ${bf}`;
+    const bfWa=`event_type='whatsapp_click' AND ${bf}`;
+    const [siteToday,siteWeek,siteMonth,siteTotal,sitePeriod,siteWhatsapp,
+      bioToday,bioWeek,bioMonth,bioTotal,bioPeriod,bioWhatsapp,
+      bfToday,bfWeek,bfMonth,bfTotal,bfPeriod,bfWhatsapp,bfWhatsappTotal]=await Promise.all([
+      count(generalPage,today),count(generalPage,week),count(generalPage,month),count(generalPage),count(generalPage,dateFilter,dateParams),count("event_type='whatsapp_click'",dateFilter,dateParams),
+      count(`event_type='page_view' AND ${bio}`,today),count(`event_type='page_view' AND ${bio}`,week),count(`event_type='page_view' AND ${bio}`,month),count(`event_type='page_view' AND ${bio}`),count(`event_type='page_view' AND ${bio}`,dateFilter,dateParams),count(`event_type='whatsapp_click' AND ${bio}`,dateFilter,dateParams),
+      count(bfVisit,today),count(bfVisit,week),count(bfVisit,month),count(bfVisit),count(bfVisit,dateFilter,dateParams),count(bfWa,dateFilter,dateParams),count(bfWa)
     ]);
     return json({
-      today:Number(today?.total||0),week:Number(week?.total||0),month:Number(month?.total||0),
-      total:Number(total?.total||0),period:Number(period?.total||0),
-      periodFrom:from||null,periodTo:to||null,whatsappClicks:Number(whatsapp?.total||0),
-      bioToday:Number(bioToday?.total||0),bioWeek:Number(bioWeek?.total||0),bioMonth:Number(bioMonth?.total||0),
-      bioTotal:Number(bioTotal?.total||0),bioPeriod:Number(bioPeriod?.total||0),bioWhatsappClicks:Number(bioWhatsapp?.total||0)
+      today:siteToday,week:siteWeek,month:siteMonth,total:siteTotal,period:sitePeriod,
+      periodFrom:from||null,periodTo:to||null,whatsappClicks:siteWhatsapp,
+      bioToday,bioWeek,bioMonth,bioTotal,bioPeriod,bioWhatsappClicks:bioWhatsapp,
+      bfToday,bfWeek,bfMonth,bfTotal,bfPeriod,bfWhatsappClicks:bfWhatsapp,bfWhatsappTotal
     });
   }
 
