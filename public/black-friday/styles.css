@@ -107,3 +107,12 @@
   .scene .play{left:33%;top:51%;width:62px;height:62px;}
   .scene .fallback-video{inset:0;width:100%;height:100%;object-fit:fill;}
 }
+
+/* V14 — iPhone/Android: mantém Neia na esquerda e libera todo o letreiro da campanha.
+   As mesmas coordenadas são aplicadas ao pôster e ao vídeo WebM transparente.
+   No Safari, o MP4 v14 já contém esta composição, inclusive durante o movimento. */
+@media(max-width:680px){
+  .scene{background-image:url('assets/cenario_mobile_aprovado_v14.jpg');}
+  .scene .subject{width:68.4615%;left:-7.6923%;top:-41.0959%;transform:none;max-width:none;height:auto;}
+  .scene .play{left:24.5%;top:43%;width:62px;height:62px;}
+}
