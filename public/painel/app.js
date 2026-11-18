@@ -25,7 +25,7 @@ function canManageUsers(){return currentUser?.role==='administrador'}
 function canManageSettings(){return currentUser?.role==='administrador'}
 function toast(message){const box=$('#toast');box.textContent=message;box.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>box.classList.remove('show'),3200)}
 function modal(html){$('#modalContent').innerHTML=html;if(!$('#modal').open)$('#modal').showModal()}
-function closeModal(){if($('#modal').open)$('#modal').close();$('#modalContent').innerHTML=''}
+function closeModal(){if($('#modal').open)$('#modal').close();$('#modalContent').innerHTML='';if(productPhotoPreviewUrl){URL.revokeObjectURL(productPhotoPreviewUrl);productPhotoPreviewUrl=''}}
 
 async function api(path,options={}){
   const response=await fetch('/api/'+path,{credentials:'same-origin',...options,headers:{...(options.body instanceof FormData?{}:{'content-type':'application/json'}),...(options.headers||{})}});
@@ -185,12 +185,55 @@ async function saveAddOnSettings(){
 function renderProducts(){
   const products=state.produtos.filter(product=>!product.arquivado).sort((a,b)=>(Number(a.ordem)||999)-(Number(b.ordem)||999));
   const content=products.length?`<div class="tableWrap"><table><thead><tr><th>Produto</th><th>Descrição</th><th>Valor</th><th>Publicação</th><th>Ações</th></tr></thead><tbody>${products.map(product=>`<tr><td><div class="productCell">${productThumb(product)}<div><span class="code">${esc(product.codigo||'Sem código')}</span><span class="category">${esc(product.categoria||'Produto')}</span>${productFeatureSummary(product)}</div></div></td><td>${esc(product.descricaoPublica||product.descricao||'—')}</td><td>${productValueMarkup(product)}${product.promocaoAtiva?`<div><span class="pill promo">Promoção${product.freteGratisCuiaba?' + frete Cuiabá':''}</span></div>`:''}${product.blackFridayAtiva?'<div><span class="pill bf-tag">Black Friday</span></div>':''}</td><td><span class="pill ${product.siteAtivo!==false?'live':''}">${product.siteAtivo!==false?'No site':'Oculto'}</span></td><td><div class="actions"><button class="btn small" data-share-product="${esc(product.codigo||'')}">Copiar link</button><button class="btn small" data-edit-product="${esc(product.id)}">Editar</button><button class="btn small danger" data-archive-product="${esc(product.id)}">Apagar</button></div></td></tr>`).join('')}</tbody></table></div>`:'<div class="empty"><strong>Nenhum produto cadastrado</strong>Cadastre o primeiro portão, porta ou lixeira para publicar no site.</div>';
-  $('#view-produtos').innerHTML=`${addOnSettingsMarkup()}<div class="sectionCard"><div class="sectionTools"><div><h2>Catálogo</h2><p>Os códigos são gerados automaticamente e não voltam a ser usados.</p></div><button class="btn primary" id="newProductBtn">+ Cadastrar produto</button></div>${content}</div>`;
+  $('#view-produtos').innerHTML=`${addOnSettingsMarkup()}<div class="sectionCard"><div class="sectionTools"><div><h2>Catálogo</h2><p>Os códigos são gerados automaticamente e não voltam a ser usados.</p></div><div class="actions">${canManageUsers()?'<button class="btn small" id="relinkPhotosBtn">Restaurar vínculos das fotos</button>':''}<button class="btn primary" id="newProductBtn">+ Cadastrar produto</button></div></div>${content}</div>`;
   if($('#editAddOnSettingsBtn'))$('#editAddOnSettingsBtn').onclick=openAddOnSettings;
   $('#newProductBtn').onclick=()=>openProductEditor();
+  if($('#relinkPhotosBtn'))$('#relinkPhotosBtn').onclick=relinkLegacyPhotos;
   $$('[data-share-product]').forEach(button=>button.onclick=()=>copyProductLink(button.dataset.shareProduct));
   $$('[data-edit-product]').forEach(button=>button.onclick=()=>openProductEditor(button.dataset.editProduct));
   $$('[data-archive-product]').forEach(button=>button.onclick=()=>archiveProduct(button.dataset.archiveProduct));
+}
+// Depois de copiar as fotos antigas com os nomes originais para o GitHub,
+// troca somente links cuja imagem já está publicada no Pages.
+async function relinkLegacyPhotos(){
+  if(!canManageUsers())return;
+  if(!confirm('Verificar fotos antigas já publicadas no GitHub? Somente vínculos confirmados serão alterados; os demais produtos permanecerão intactos.'))return;
+  const button=$('#relinkPhotosBtn');button.disabled=true;
+  const checked=new Map();let changed=0;
+  async function relink(value){
+    if(typeof value!=='string')return value;
+    const match=value.match(/^\/api\/media\/public\/([a-zA-Z0-9][a-zA-Z0-9._-]{0,180}\.(?:jpe?g|png|webp))$/i);
+    if(!match)return value;
+    const next=`/fotos-produtos/${match[1]}`;
+    if(!checked.has(next)){
+      let valid=false;
+      try{const response=await fetch(next,{method:'HEAD',cache:'no-store'});valid=response.ok&&!response.redirected&&['image/jpeg','image/png','image/webp'].includes((response.headers.get('content-type')||'').split(';')[0].trim().toLowerCase())}catch{}
+      checked.set(next,valid);
+    }
+    if(checked.get(next)){changed++;return next}
+    return value;
+  }
+  try{
+    const fresh=await api('state');const products=fresh.state?.produtos||[];
+    if(!fresh.version)throw new Error('Não foi possível confirmar a versão do banco.');
+    const updated=[];
+    for(let i=0;i<products.length;i++){
+      const product={...products[i]};
+      if(button.isConnected)button.textContent=`Verificando ${i+1}/${products.length}...`;
+      if(product.imagem)product.imagem=await relink(product.imagem);
+      if(Array.isArray(product.galeria)){
+        const gallery=[];for(const item of product.galeria){
+          if(typeof item==='string')gallery.push(await relink(item));
+          else if(item&&typeof item==='object'){const copy={...item};if(copy.url)copy.url=await relink(copy.url);if(copy.imagem)copy.imagem=await relink(copy.imagem);gallery.push(copy)}else gallery.push(item);
+        }product.galeria=gallery;
+      }
+      updated.push(product);
+    }
+    if(!changed){toast('Nenhuma foto antiga confirmada. Confira a publicação do Cloudflare.');return;}
+    const result=await api('state',{method:'PUT',body:JSON.stringify({state:{produtos:updated},version:fresh.version,audit:{action:'Vínculos de fotos restaurados',detail:`${changed} vínculos confirmados`}})});
+    state.produtos=result.state?.produtos||updated;stateVersion=result.version;
+    if(currentView==='produtos')renderProducts();toast(`${changed} vínculos restaurados.`);
+  }catch(error){toast(error.message)}finally{if(button.isConnected){button.disabled=false;button.textContent='Restaurar vínculos das fotos'}}
 }
 function publicSiteOrigin(){
   const current=new URL(window.location.href);
@@ -213,7 +256,7 @@ function openProductEditor(productId=''){
   const image=product.imagem?`<img src="${esc(product.imagem)}" alt="Imagem do produto">`:'A imagem aparecerá aqui';
   const doorLock=product.categoria==='Porta'?product.tipoFechadura||'':'';
   const gateLock=product.temPortaoSocial&&product.tipoFechadura?product.tipoFechadura:'normal';
-  modal(`<div class="modalHead"><strong>${existing?'Editar produto':'Cadastrar produto'}</strong><button class="iconBtn" id="closeEditorBtn" aria-label="Fechar">×</button></div><div class="modalBody"><div class="formGrid"><label class="field"><span>Categoria</span><select id="pCategory" ${existing?'disabled':''}><option value="Portão" ${product.categoria==='Portão'?'selected':''}>Portão</option><option value="Porta" ${product.categoria==='Porta'?'selected':''}>Porta</option><option value="Lixeira" ${product.categoria==='Lixeira'?'selected':''}>Lixeira</option></select></label><label class="field"><span>Código automático</span><input id="pCode" value="${esc(product.codigo||nextProductCode(product.categoria||'Portão'))}" disabled><small class="help">O código não pode ser alterado e nunca será reutilizado.</small></label><div class="field full"><span>Foto do produto</span><div class="imageEditor"><div class="imagePreview" id="imagePreview">${image}</div><div><input id="pImage" type="file" accept="image/jpeg,image/png,image/webp"><input id="pImageUrl" type="hidden" value="${esc(product.imagem||'')}"><div class="uploadStatus" id="uploadStatus">JPG, PNG ou WebP de até 3 MB.</div></div></div></div><label class="field full"><span>Descrição que aparecerá no site</span><textarea id="pDescription" maxlength="500" placeholder="Descreva somente o que o cliente precisa saber sobre este produto.">${esc(product.descricaoPublica||product.descricao||'')}</textarea></label><label class="field"><span>Valor</span><input id="pPrice" type="number" min="0" step="0.01" value="${Number(product.preco)>0?Number(product.preco):''}" placeholder="Deixe vazio para orçamento"><small class="help">Se ficar vazio, o site mostrará “Solicite orçamento”.</small></label><div class="switchRow"><input id="pVisible" type="checkbox" ${product.siteAtivo!==false?'checked':''}><label for="pVisible"><strong>Exibir no site</strong><small>Desmarque para manter o cadastro oculto.</small></label></div><section class="productConfiguration field full" id="gateConfiguration"><div class="productConfigurationHead"><strong>Portão social e fechadura</strong><small>Defina o que já faz parte deste portão e o que pode ser acrescentado.</small></div><div class="switchRow"><input id="pHasSocialGate" type="checkbox" ${product.temPortaoSocial?'checked':''}><label for="pHasSocialGate"><strong>Este portão já possui portão social</strong><small>Marque quando o portão social já estiver incluído no valor do produto.</small></label></div><div class="switchRow" id="allowSocialGateRow"><input id="pAllowSocialGate" type="checkbox" ${product.permiteAdicionarPortaoSocial?'checked':''}><label for="pAllowSocialGate"><strong>Permitir portão social como adicional</strong><small>O catálogo usará o valor global de ${esc(configuredMoneyLabel(state.empresa.adicionalPortaoSocial))}.</small></label></div><label class="field" id="gateLockTypeField"><span>Fechadura incluída no portão social</span><select id="pGateLockType"><option value="normal" ${gateLock==='normal'?'selected':''}>Normal</option><option value="tetra" ${gateLock==='tetra'?'selected':''}>Tetra</option></select><small class="help">Se for normal, o cliente poderá trocar pela tetra pelo acréscimo global.</small></label></section><section class="productConfiguration field full" id="doorConfiguration"><div class="productConfigurationHead"><strong>Fechadura da porta</strong><small>Informe a fechadura que já está incluída no valor do produto.</small></div><label class="field"><span>Tipo de fechadura incluída</span><select id="pDoorLockType"><option value="" ${doorLock===''?'selected':''}>Não configurada</option><option value="normal" ${doorLock==='normal'?'selected':''}>Normal</option><option value="tetra" ${doorLock==='tetra'?'selected':''}>Tetra</option></select><small class="help">Com fechadura normal, o catálogo oferecerá a troca pela tetra por ${esc(configuredMoneyLabel(state.empresa.adicionalFechaduraTetra))}.</small></label></section><div class="switchRow field full"><input id="pPromotion" type="checkbox" ${product.promocaoAtiva?'checked':''}><label for="pPromotion"><strong>Produto em promoção</strong><small>Ative para informar um valor promocional.</small></label></div><div class="promoOptions" id="promotionOptions" ${product.promocaoAtiva?'':'hidden'}><label class="field"><span>Valor da promoção</span><input id="pPromoPrice" type="number" min="0" step="0.01" value="${Number(product.precoPromocional)>0?Number(product.precoPromocional):''}" placeholder="0,00"></label><div class="switchRow"><input id="pFreeCuiaba" type="checkbox" ${product.promocaoAtiva&&product.freteGratisCuiaba?'checked':''}><label for="pFreeCuiaba"><strong>Frete grátis para Cuiabá</strong><small>Vale somente para esta promoção. Se não marcar, Cuiabá continua R$ 100,00.</small></label></div></div><section class="bfConfiguration field full" id="bfConfiguration"><div class="productConfigurationHead"><strong>BLACK FRIDAY — CAMPANHA</strong><small>Selecione portões, portas ou lixeiras. O preço de campanha não altera a promoção normal do catálogo.</small></div><div class="switchRow"><input id="pBlackFriday" type="checkbox" ${product.blackFridayAtiva?'checked':''}><label for="pBlackFriday"><strong>Incluir este produto na Black Friday</strong><small>Exibir na landing page promocional quando o produto estiver visível no site.</small></label></div><label class="field" id="bfPriceRow"><span>Preço na Black Friday (R$)</span><input id="pBlackFridayPrice" type="number" min="0.01" step="0.01" value="${Number(product.precoBlackFriday)>0?Number(product.precoBlackFriday):''}" placeholder="Ex.: 2699.90"><small class="help">Precisa ser menor que o preço normal. Não interfere no preço promocional do catálogo principal.</small></label><small class="help">A participação pode ser desativada sem apagar este preço do cadastro.</small></section></div></div><div class="modalFoot"><button class="btn" id="cancelProductBtn">Cancelar</button><button class="btn primary" id="saveProductBtn">Salvar produto</button></div>`);
+  modal(`<div class="modalHead"><strong>${existing?'Editar produto':'Cadastrar produto'}</strong><button class="iconBtn" id="closeEditorBtn" aria-label="Fechar">×</button></div><div class="modalBody"><div class="formGrid"><label class="field"><span>Categoria</span><select id="pCategory" ${existing?'disabled':''}><option value="Portão" ${product.categoria==='Portão'?'selected':''}>Portão</option><option value="Porta" ${product.categoria==='Porta'?'selected':''}>Porta</option><option value="Lixeira" ${product.categoria==='Lixeira'?'selected':''}>Lixeira</option></select></label><label class="field"><span>Código automático</span><input id="pCode" value="${esc(product.codigo||nextProductCode(product.categoria||'Portão'))}" disabled><small class="help">O código não pode ser alterado e nunca será reutilizado.</small></label><div class="field full"><span>Foto do produto</span><div class="imageEditor"><div class="imagePreview" id="imagePreview">${image}</div><div><input id="pImage" type="file" accept="image/jpeg,image/png,image/webp"><input id="pImageUrl" type="hidden" value="${esc(product.imagem||'')}"><div class="uploadStatus" id="uploadStatus">JPG, PNG ou WebP. A foto será otimizada automaticamente.</div></div></div></div><label class="field full"><span>Descrição que aparecerá no site</span><textarea id="pDescription" maxlength="500" placeholder="Descreva somente o que o cliente precisa saber sobre este produto.">${esc(product.descricaoPublica||product.descricao||'')}</textarea></label><label class="field"><span>Valor</span><input id="pPrice" type="number" min="0" step="0.01" value="${Number(product.preco)>0?Number(product.preco):''}" placeholder="Deixe vazio para orçamento"><small class="help">Se ficar vazio, o site mostrará “Solicite orçamento”.</small></label><div class="switchRow"><input id="pVisible" type="checkbox" ${product.siteAtivo!==false?'checked':''}><label for="pVisible"><strong>Exibir no site</strong><small>Desmarque para manter o cadastro oculto.</small></label></div><section class="productConfiguration field full" id="gateConfiguration"><div class="productConfigurationHead"><strong>Portão social e fechadura</strong><small>Defina o que já faz parte deste portão e o que pode ser acrescentado.</small></div><div class="switchRow"><input id="pHasSocialGate" type="checkbox" ${product.temPortaoSocial?'checked':''}><label for="pHasSocialGate"><strong>Este portão já possui portão social</strong><small>Marque quando o portão social já estiver incluído no valor do produto.</small></label></div><div class="switchRow" id="allowSocialGateRow"><input id="pAllowSocialGate" type="checkbox" ${product.permiteAdicionarPortaoSocial?'checked':''}><label for="pAllowSocialGate"><strong>Permitir portão social como adicional</strong><small>O catálogo usará o valor global de ${esc(configuredMoneyLabel(state.empresa.adicionalPortaoSocial))}.</small></label></div><label class="field" id="gateLockTypeField"><span>Fechadura incluída no portão social</span><select id="pGateLockType"><option value="normal" ${gateLock==='normal'?'selected':''}>Normal</option><option value="tetra" ${gateLock==='tetra'?'selected':''}>Tetra</option></select><small class="help">Se for normal, o cliente poderá trocar pela tetra pelo acréscimo global.</small></label></section><section class="productConfiguration field full" id="doorConfiguration"><div class="productConfigurationHead"><strong>Fechadura da porta</strong><small>Informe a fechadura que já está incluída no valor do produto.</small></div><label class="field"><span>Tipo de fechadura incluída</span><select id="pDoorLockType"><option value="" ${doorLock===''?'selected':''}>Não configurada</option><option value="normal" ${doorLock==='normal'?'selected':''}>Normal</option><option value="tetra" ${doorLock==='tetra'?'selected':''}>Tetra</option></select><small class="help">Com fechadura normal, o catálogo oferecerá a troca pela tetra por ${esc(configuredMoneyLabel(state.empresa.adicionalFechaduraTetra))}.</small></label></section><div class="switchRow field full"><input id="pPromotion" type="checkbox" ${product.promocaoAtiva?'checked':''}><label for="pPromotion"><strong>Produto em promoção</strong><small>Ative para informar um valor promocional.</small></label></div><div class="promoOptions" id="promotionOptions" ${product.promocaoAtiva?'':'hidden'}><label class="field"><span>Valor da promoção</span><input id="pPromoPrice" type="number" min="0" step="0.01" value="${Number(product.precoPromocional)>0?Number(product.precoPromocional):''}" placeholder="0,00"></label><div class="switchRow"><input id="pFreeCuiaba" type="checkbox" ${product.promocaoAtiva&&product.freteGratisCuiaba?'checked':''}><label for="pFreeCuiaba"><strong>Frete grátis para Cuiabá</strong><small>Vale somente para esta promoção. Se não marcar, Cuiabá continua R$ 100,00.</small></label></div></div><section class="bfConfiguration field full" id="bfConfiguration"><div class="productConfigurationHead"><strong>BLACK FRIDAY — CAMPANHA</strong><small>Selecione portões, portas ou lixeiras. O preço de campanha não altera a promoção normal do catálogo.</small></div><div class="switchRow"><input id="pBlackFriday" type="checkbox" ${product.blackFridayAtiva?'checked':''}><label for="pBlackFriday"><strong>Incluir este produto na Black Friday</strong><small>Exibir na landing page promocional quando o produto estiver visível no site.</small></label></div><label class="field" id="bfPriceRow"><span>Preço na Black Friday (R$)</span><input id="pBlackFridayPrice" type="number" min="0.01" step="0.01" value="${Number(product.precoBlackFriday)>0?Number(product.precoBlackFriday):''}" placeholder="Ex.: 2699.90"><small class="help">Precisa ser menor que o preço normal. Não interfere no preço promocional do catálogo principal.</small></label><small class="help">A participação pode ser desativada sem apagar este preço do cadastro.</small></section></div></div><div class="modalFoot"><button class="btn" id="cancelProductBtn">Cancelar</button><button class="btn primary" id="saveProductBtn">Salvar produto</button></div>`);
   $('#closeEditorBtn').onclick=closeModal;$('#cancelProductBtn').onclick=closeModal;
   $('#pCategory').onchange=()=>{$('#pCode').value=nextProductCode($('#pCategory').value);updateProductConfiguration(!existing)};
   $('#pHasSocialGate').onchange=()=>updateProductConfiguration(false);
@@ -245,14 +288,44 @@ function togglePromotionOptions(){
   $('#promotionOptions').hidden=!active;
   if(!active){$('#pFreeCuiaba').checked=false;$('#pFreeCuiaba').disabled=true}else $('#pFreeCuiaba').disabled=false;
 }
-async function uploadProductImage(event){
-  const file=event.target.files?.[0];if(!file)return;
-  const status=$('#uploadStatus');status.textContent='Enviando imagem...';event.target.disabled=true;
+async function optimizeProductPhoto(file){
+  if(!['image/jpeg','image/png','image/webp'].includes(file.type))throw new Error('Selecione uma foto JPG, PNG ou WebP.');
+  if(file.size>20*1024*1024)throw new Error('Selecione uma foto original de até 20 MB.');
+  const source=URL.createObjectURL(file);
   try{
-    const form=new FormData();form.append('scope','public');form.append('file',file);
+    const image=new Image();image.src=source;await image.decode();
+    if(!image.naturalWidth||!image.naturalHeight)throw new Error('Imagem inválida.');
+    const canvas=document.createElement('canvas');const ctx=canvas.getContext('2d');
+    for(const limit of [1200,1000,800,640]){
+      const scale=Math.min(1,limit/Math.max(image.naturalWidth,image.naturalHeight));
+      canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
+      ctx.drawImage(image,0,0,canvas.width,canvas.height);
+      for(const quality of [0.84,0.72,0.60]){
+        let blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/webp',quality));
+        if(!blob||blob.type!=='image/webp')blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',quality));
+        if(blob&&['image/webp','image/jpeg'].includes(blob.type)&&blob.size<=600*1024)return new File([blob],blob.type==='image/webp'?'produto.webp':'produto.jpg',{type:blob.type});
+      }
+    }
+    throw new Error('Não foi possível reduzir esta foto para 600 KB. Escolha outra imagem.');
+  }finally{URL.revokeObjectURL(source)}
+}
+let productPhotoPreviewUrl='';
+async function uploadProductImage(event){
+  const input=event.target,file=input.files?.[0];if(!file)return;
+  const status=$('#uploadStatus'),save=$('#saveProductBtn'),urlField=$('#pImageUrl'),preview=$('#imagePreview');
+  status.textContent='Otimizando imagem...';input.disabled=true;save.disabled=true;
+  try{
+    const optimized=await optimizeProductPhoto(file);
+    if(!input.isConnected)return;
+    status.textContent='Enviando foto ao GitHub...';
+    const form=new FormData();form.append('scope','public');form.append('file',optimized);
     const result=await api('upload',{method:'POST',body:form});
-    $('#pImageUrl').value=result.url;$('#imagePreview').innerHTML=`<img src="${esc(result.url)}" alt="Imagem do produto">`;status.textContent='Imagem enviada com sucesso.';
-  }catch(error){status.textContent=error.message;toast(error.message)}finally{event.target.disabled=false}
+    if(!input.isConnected)return;
+    if(productPhotoPreviewUrl)URL.revokeObjectURL(productPhotoPreviewUrl);
+    productPhotoPreviewUrl=URL.createObjectURL(optimized);
+    urlField.value=result.url;preview.innerHTML=`<img src="${esc(productPhotoPreviewUrl)}" alt="Imagem do produto">`;
+    status.textContent='Foto gravada no GitHub. Salve o produto. A imagem ficará pública após a publicação automática do Cloudflare.';
+  }catch(error){if(input.isConnected){status.textContent=error.message;toast(error.message);input.value=''}}finally{if(input.isConnected){input.disabled=false;save.disabled=false}}
 }
 async function saveProduct(productId,exists){
   const category=$('#pCategory').value;

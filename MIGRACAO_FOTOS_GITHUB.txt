@@ -1,0 +1,49 @@
+SERRALHERIA UNIVERSAL — MIGRAÇÃO DE FOTOS PÚBLICAS
+
+Este pacote contém somente os arquivos novos ou modificados. Preserve todos os
+outros arquivos do repositório, o projeto Pages, a ligação D1 DB e seus dados.
+As fotos antigas NÃO estão incluídas: devem ser recuperadas do Supabase.
+
+1. Antes de publicar: faça backup do repositório e do D1.
+2. Na conta proprietária do repositório no GitHub, abra Settings > Developer
+   settings > Personal access tokens > Fine-grained tokens. Gere um token com
+   validade definida, acesso apenas ao repositório
+   universalvgsite/site-serrelhaeria-universal, permissão Contents: Read and write.
+   Nunca envie o token no chat, nem coloque em arquivos do repositório.
+3. Cloudflare > Workers & Pages > projeto do site > Settings > Variables and
+   Secrets. Na configuração Production, adicione GITHUB_PHOTOS_TOKEN como
+   segredo (Secret), com o valor do token. Preserve DB e as variáveis Supabase.
+4. Extraia este ZIP. Publique os arquivos das pastas functions e public nos
+   mesmos caminhos do repositório main, sem apagar os outros arquivos.
+   Faça um único commit; confirme que o Cloudflare Pages publicou com sucesso.
+5. No painel /painel/ autentique-se. Teste com um produto e foto JPG/PNG/WebP.
+   O painel reduz para até 1200 px e até 600 KB. O upload cria um commit no
+   GitHub; salve o produto. Aguarde a publicação do Pages e confira o catálogo.
+   Se o token falhar, confira validade, aprovação e permissão do repositório.
+   A prévia local não prova que a foto já foi publicada.
+6. RECUPERAÇÃO DAS FOTOS ANTIGAS: Supabase > Storage > bucket público
+   universal-produtos (ou o nome definido em SUPABASE_PUBLIC_BUCKET).
+   Baixe os arquivos mantendo seus nomes e extensões originais. Se o erro 402
+   bloquear o download, aguarde o início do próximo ciclo gratuito ou procure
+   o suporte. Nunca copie o bucket privado universal-anexos para o GitHub.
+7. Coloque apenas as fotos públicas recuperadas em public/fotos-produtos/
+   e publique todas em um único commit. Confira a publicação no Cloudflare.
+   O endereço /api/media/public/NOME continuará compatível e procurará a foto
+   estática antes do Supabase. No painel, Produtos > Restaurar vínculos das fotos
+   verifica a publicação e troca os links antigos confirmados pelo caminho
+   estático. Os demais links permanecem inalterados. A ação reconhece os links
+   relativos /api/media/public/NOME com imagens JPG, PNG e WebP na raiz do bucket.
+   Links externos ou outros formatos precisam de revisão individual.
+8. Não exclua o Supabase: anexos privados permanecem nele. O bloqueio atual pode
+   afetar também esses anexos. Não coloque dados de clientes no repositório.
+
+LIMITAÇÕES: Cada nova foto enviada cria um commit e pode disparar um build.
+O plano gratuito do Cloudflare Pages tem limites. Não faça uploads em massa
+pelo painel; envie lotes de imagens antigas em um único commit. As fotos não
+aparecem publicamente até o Pages terminar a publicação. GitHub não substitui
+armazenamento de objetos para grandes volumes e o histórico Git cresce.
+
+VALIDAÇÃO LOCAL: npm test (10 testes, inclui mocks HTTP da API GitHub e fallback
+para imagens antigas); node tests/regression.mjs (regressão existente). Testes
+não publicam arquivos e não usam credenciais reais. Validação em produção ainda
+necessária. O ZIP não contém token, fotos antigas, cadastro de produtos ou D1.

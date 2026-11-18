@@ -12,3 +12,6 @@
 
 /api/black-friday
   Cache-Control: no-store
+
+/fotos-produtos/*
+  Cache-Control: public, max-age=60, must-revalidate

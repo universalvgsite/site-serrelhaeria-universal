@@ -1,0 +1,12 @@
+SERRALHERIA UNIVERSAL — RESTAURAÇÃO DE FOTOS DO CACHE
+
+29 arquivos de imagem recuperados e verificados. 12 nomes JPEG com sufixo extra .jpg foram corrigidos conforme o formato de nomes usado no código original. Duas imagens de conteúdo idêntico possuem nomes diferentes e foram mantidas para preservar seus vínculos. As imagens desta pasta foram redimensionadas para até 1200 px e otimizadas, mantendo o formato e o nome original inferido. Guarde o RAR original como backup. Não foi possível confirmar todos os nomes com o catálogo D1 em produção.
+
+1. Faça backup do D1 e do repositório.
+2. Extraia o ZIP. Envie o conteúdo de functions/ e public/ para os MESMOS caminhos no repositório (não apague as pastas existentes). Não envie o ZIP como um arquivo do site. Faça um único commit com todo o lote. A pasta test/ contém um teste opcional e os TXT são instruções.
+3. Aguarde o deploy bem-sucedido do Cloudflare Pages.
+4. No painel, entre como administrador, abra Produtos e clique em Restaurar vínculos das fotos. Confirme e aguarde a verificação. Somente os links relativos antigos cujas imagens estão publicadas serão alterados.
+5. Confira o catálogo e Black Friday. Se houver fotos faltando, preserve seus vínculos e procure outros caches ou o Supabase após desbloqueio.
+6. Para NOVAS fotos pelo painel, configure também GITHUB_PHOTOS_TOKEN como Secret no projeto Pages, conforme MIGRACAO_FOTOS_GITHUB.txt. Não é necessário para servir as fotos já recuperadas.
+
+Não altere DB, nem exclua o Supabase. Anexos privados permanecem nele. Não há credenciais neste pacote. Publicação e vínculos reais ainda precisam ser validados no ambiente de produção.

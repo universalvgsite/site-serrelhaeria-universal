@@ -138,6 +138,64 @@ function storageObjectUrl(config,bucket,key,isPublic=false){
   return `${config.baseUrl}/storage/v1/object/${isPublic?'public/':''}${encodeURIComponent(bucket)}/${objectPath(key)}`;
 }
 
+// Fotos públicas são arquivos estáticos publicados pelo Pages a partir do GitHub.
+const PHOTO_REPO='universalvgsite/site-serrelhaeria-universal';
+const PHOTO_BRANCH='main';
+const PHOTO_DIR='fotos-produtos';
+const PHOTO_MAX_BYTES=600*1024;
+const SAFE_PHOTO_KEY=/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,180}\.(?:jpe?g|png|webp)$/i;
+const PHOTO_TYPES=['image/jpeg','image/png','image/webp'];
+function photoType(bytes){
+  if(bytes.length>=3&&bytes[0]===255&&bytes[1]===216&&bytes[2]===255)return 'image/jpeg';
+  if(bytes.length>=8&&[137,80,78,71,13,10,26,10].every((v,i)=>bytes[i]===v))return 'image/png';
+  if(bytes.length>=12&&[82,73,70,70].every((v,i)=>bytes[i]===v)&&[87,69,66,80].every((v,i)=>bytes[i+8]===v))return 'image/webp';
+  return '';
+}
+function photoBase64(bytes){
+  if(typeof bytes.toBase64==='function')return bytes.toBase64();
+  // Tamanho múltiplo de 3: evita padding no meio da string.
+  let out='';for(let i=0;i<bytes.length;i+=24576)out+=btoa(String.fromCharCode(...bytes.subarray(i,i+24576)));
+  return out;
+}
+async function uploadPublicPhoto(context,file){
+  const token=String(context.env.GITHUB_PHOTOS_TOKEN||'').trim();
+  if(!token)return json({error:'Configure o segredo GITHUB_PHOTOS_TOKEN no Cloudflare Pages.'},503);
+  if(!file.size||file.size>PHOTO_MAX_BYTES)return json({error:'A foto otimizada precisa ter até 600 KB.'},413);
+  if(!PHOTO_TYPES.includes(file.type))return json({error:'Envie uma imagem JPG, PNG ou WebP.'},415);
+  const bytes=new Uint8Array(await file.arrayBuffer());
+  const type=photoType(bytes);
+  if(type!==file.type)return json({error:'O conteúdo do arquivo não corresponde a uma imagem permitida.'},415);
+  const ext={'image/jpeg':'jpg','image/png':'png','image/webp':'webp'}[type];
+  const key=`gh-${Date.now()}-${crypto.randomUUID()}.${ext}`;
+  const path=`public/${PHOTO_DIR}/${key}`;
+  const body=JSON.stringify({message:`Adicionar foto de produto ${key}`,content:photoBase64(bytes),branch:PHOTO_BRANCH});
+  let stored;
+  try{stored=await fetch(`https://api.github.com/repos/${PHOTO_REPO}/contents/${path}`,{
+    method:'PUT',redirect:'error',headers:{'authorization':`Bearer ${token}`,'accept':'application/vnd.github+json','content-type':'application/json','user-agent':'Universal-Pages-Photo-Upload','x-github-api-version':'2022-11-28'},body
+  });}catch{return json({error:'Não foi possível conectar ao GitHub. Tente novamente.'},502);}
+  if(!stored.ok){
+    console.error('GitHub: falha no envio de foto pública.',stored.status);
+    const message=stored.status===401||stored.status===403||stored.status===404?'Confira a validade do token e a permissão Contents: Read and write no repositório correto.':stored.status===409||stored.status===422?'O GitHub recusou a gravação. Tente novamente após alguns segundos.':'GitHub indisponível ou limite de requisições atingido. Tente novamente.';
+    return json({error:message},502);
+  }
+  return json({ok:true,key,scope:'public',url:`/${PHOTO_DIR}/${key}`,name:file.name,type,size:file.size,pendingDeploy:true});
+}
+async function serveLegacyPublicPhoto(context,key){
+  if(!SAFE_PHOTO_KEY.test(key))return new Response('Not found',{status:404});
+  const assetUrl=new URL(`/${PHOTO_DIR}/${key}`,context.request.url);
+  if(context.env.ASSETS){
+    try{
+      const asset=await context.env.ASSETS.fetch(new Request(assetUrl,{method:'HEAD'}));
+      if(asset.ok&&PHOTO_TYPES.includes((asset.headers.get('content-type')||'').split(';')[0].trim().toLowerCase())){
+        return new Response(null,{status:302,headers:{location:assetUrl.pathname,'cache-control':'public, max-age=3600'}});
+      }
+    }catch{ /* fallback para arquivos ainda não recuperados */ }
+  }
+  const config=storageConfig(context);
+  if(!config)return new Response('Foto antiga ainda não recuperada.',{status:404,headers:{'cache-control':'no-store'}});
+  return new Response(null,{status:302,headers:{location:storageObjectUrl(config,config.publicBucket,key,true),'cache-control':'no-store'}});
+}
+
 async function sha256(input){
   const data = typeof input === 'string' ? new TextEncoder().encode(input) : input;
   const digest = await crypto.subtle.digest('SHA-256', data);
@@ -292,13 +350,15 @@ async function saveState(context, user, incoming, auditMeta={}, expectedVersion=
 }
 
 async function route(context){
-  await ensureSchema(context.env.DB);
   const req=context.request, url=new URL(req.url), method=req.method.toUpperCase();
   const path=url.pathname.replace(/^\/api\/?/,'');
   const seg=path.split('/').filter(Boolean).map(decodeURIComponent);
+  // Fotos antigas não consultam D1 nem sessões públicas.
+  if(seg[0]==='media'&&seg[1]==='public'&&['GET','HEAD'].includes(method))return serveLegacyPublicPhoto(context,seg.slice(2).join('/'));
+  await ensureSchema(context.env.DB);
   const user=await getSession(context);
 
-  if(path==='health' && method==='GET') return json({ok:true,service:'Universal',storage:storageConfig(context)?'supabase':'not_configured',time:nowISO()});
+  if(path==='health' && method==='GET') return json({ok:true,service:'Universal',storage:context.env.GITHUB_PHOTOS_TOKEN?'github':'github_not_configured',privateStorage:storageConfig(context)?'supabase':'not_configured',time:nowISO()});
 
   if(path==='bootstrap/status' && method==='GET'){
     const row=await context.env.DB.prepare(`SELECT COUNT(*) c FROM users`).first();
@@ -462,12 +522,15 @@ async function route(context){
   }
 
   if(path==='upload' && method==='POST'){
-    const config=storageConfig(context);
-    if(!config) return json({error:'Supabase Storage não configurado no Cloudflare.'},503);
+    const origin=req.headers.get('origin');
+    if(origin&&origin!==url.origin)return json({error:'Origem não permitida.'},403);
     const form=await req.formData(); const file=form.get('file'); let scope=String(form.get('scope')||'private');
     if(scope!=='public') scope='private';
     if(!(file instanceof File)) return json({error:'Arquivo ausente.'},400);
-    const maxBytes=scope==='public'?3*1024*1024:12*1024*1024;
+    if(scope==='public')return uploadPublicPhoto(context,file);
+    const config=storageConfig(context);
+    if(!config)return json({error:'Supabase Storage de anexos privados não configurado.'},503);
+    const maxBytes=12*1024*1024;
     if(file.size>maxBytes) return json({error:`Arquivo excede ${scope==='public'?3:12} MB.`},413);
     const allowed=scope==='public'?['image/jpeg','image/png','image/webp']:['image/jpeg','image/png','image/webp','application/pdf'];
     if(!allowed.includes(file.type)) return json({error:'Tipo de arquivo não permitido.'},415);
@@ -533,3 +596,5 @@ export async function onRequest(context){
     console.error(err); return json({error:'Erro interno do sistema.'},500);
   }
 }
+
+export {photoType,photoBase64,uploadPublicPhoto,serveLegacyPublicPhoto};
