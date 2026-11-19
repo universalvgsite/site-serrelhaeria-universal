@@ -53,7 +53,9 @@
       const response=await fetch('/api/black-friday',{cache:'no-store'});
       if(!response.ok)throw new Error('API indisponível');
       const data=await response.json();
-      if(data?.ativa===false){showMessage('Black Friday encerrada','A campanha não está disponível neste momento.');return;}
+      const ended=()=>{const dialog=$('#lightbox');if(dialog?.open)dialog.close();$('#buy').removeAttribute('href');showMessage('Black Friday encerrada','A campanha não está disponível neste momento.');};
+      window.UniversalBF.watch(data,ended);
+      if(data?.ativa===false||!window.UniversalBF.isActive())return;
       const item=(Array.isArray(data?.produtos)?data.produtos:[]).find(p=>p&&p.id===id);
       if(!item||!item.imagem||Number(item.precoPromocional)<=0){
         showMessage('Produto indisponível nesta campanha','O modelo não está mais selecionado para a Black Friday. Consulte outras ofertas.');return;
@@ -70,8 +72,10 @@
       const previous=Number(item.precoAnterior),current=Number(item.precoPromocional);
       $('#oldPrice').textContent=previous>current?`De ${brl(previous)}`:'';
       $('#newPrice').textContent=brl(current);
+      const discount=window.UniversalBF.discount(previous,current);
+      if(discount){$('#bfSavings').textContent=`${discount.percent}% OFF · Você economiza ${brl(discount.amount)}`;$('#bfSavings').hidden=false;}
       const buy=$('#buy');buy.href=whatsappUrl(item,phone);
-      buy.addEventListener('click',()=>track('whatsapp_click',item.id));
+      buy.addEventListener('click',event=>{if(!window.UniversalBF.isActive()){event.preventDefault();ended();return;}track('whatsapp_click',item.id);});
       $('#copyLink').addEventListener('click',()=>copyLink(item));
       const dialog=$('#lightbox');
       const fullImage=$('#fullImage');

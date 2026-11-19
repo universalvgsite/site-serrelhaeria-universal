@@ -1,5 +1,6 @@
 // Cloudflare Pages Function: /produto/:codigo
 // Consulta o mesmo D1 do catálogo. Não modifica app_state nem dados do painel.
+import {blackFridayStatus} from "../api/[[path]].js";
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money = value => {
   if (value === null || value === undefined || value === '') return null;
@@ -13,6 +14,7 @@ const isEnabled = obj => obj && ![false,0,'false','0'].includes(obj.ativo) && ![
 // explicitamente listado na configuração da campanha dentro do estado D1.
 // IMPORTANTE: conferir os nomes dos campos da campanha real antes de publicar.
 function ofertaBlackFriday(state, produto) {
+  if(!blackFridayStatus(state.empresa).ativa)return null;
   const bf = state.blackFriday || state.black_friday || state.campanhaBlackFriday;
   if (!isEnabled(bf)) return null;
   const itens = Array.isArray(bf) ? bf : (bf?.produtos || bf?.itens || bf?.ofertas);

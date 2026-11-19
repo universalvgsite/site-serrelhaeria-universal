@@ -60,7 +60,8 @@
   }
   function makeCard(p){
     const article=elt('article','card');
-    article.appendChild(elt('div','card-tag','BLACK FRIDAY'));
+    const discount=window.UniversalBF.discount(p.precoAnterior,p.precoPromocional);
+    article.appendChild(elt('div','card-tag',discount?`BLACK FRIDAY · ${discount.percent}% OFF`:'BLACK FRIDAY'));
     const photoLink=elt('a','card-photo-link');photoLink.href=productPath(p);
     photoLink.setAttribute('aria-label',`Abrir foto ampliada e detalhes de ${p.nome}`);
     const img=elt('img','photo');img.src=p.imagem;img.alt=`Foto do produto ${p.nome}${p.codigo?' - '+p.codigo:''}`;img.loading='lazy';img.decoding='async';
@@ -74,7 +75,9 @@
     if(Number.isFinite(promo)&&promo>0){
       const prices=elt('div','price');
       if(Number.isFinite(original)&&original>promo)prices.appendChild(elt('span','old-price',`De ${brl(original)}`));
-      prices.appendChild(elt('span','new-price',brl(promo)));body.appendChild(prices);
+      prices.appendChild(elt('span','new-price',brl(promo)));
+      if(discount)prices.appendChild(elt('span','bf-savings',`Você economiza ${brl(discount.amount)}`));
+      body.appendChild(prices);
     }
     const actions=elt('div','card-actions');
     const details=elt('a','details-button','VER FOTOS, PREÇO E COMPRAR');details.href=productPath(p);actions.appendChild(details);
@@ -93,7 +96,8 @@
       const response=await fetch('/api/black-friday',{cache:'no-store'});
       if(!response.ok)throw new Error('API indisponível');
       const data=await response.json();
-      if(data?.ativa===false){showCampaignEnded();return;}
+      window.UniversalBF.watch(data,showCampaignEnded);
+      if(data?.ativa===false||!window.UniversalBF.isActive())return;
       const items=Array.isArray(data?.produtos)?data.produtos:[];
       phone=String(data?.whatsapp||'556536844696').replace(/\D/g,'')||'556536844696';
       const selected=items.filter(p=>p && ['Portão','Porta','Lixeira'].includes(p.categoria) && p.id && p.nome && p.imagem && Number(p.precoPromocional)>0);

@@ -387,8 +387,13 @@ function renderBlackFriday(){
     return `<article class="bf-product" data-bf-product="${esc(p.id)}"><div class="bf-product-main">${productThumb(p)}<div><strong>${esc(p.codigo||p.nome)}</strong><span>${esc(p.categoria)} · ${esc(p.descricaoPublica||p.descricao||'')}</span><small>Preço normal: ${price>0?brl(price):'não cadastrado'}</small>${blocked?'<small class="bf-warning">Produto oculto/indisponível no site: não aparecerá na campanha.</small>':''}</div></div><label class="bf-toggle"><input type="checkbox" data-bf-active ${p.blackFridayAtiva?'checked':''}><span>Participar da Black Friday</span></label><label class="bf-price">Preço Black Friday (R$)<input type="number" data-bf-price min="0.01" step="0.01" value="${campaign>0?campaign:''}" placeholder="Valor da oferta"></label></article>`;
   }).join('')}</div>`:'<div class="empty"><strong>Nenhum produto cadastrado</strong>Cadastre os produtos na seção Produtos antes de selecionar a campanha.</div>';
   const campaignActive=state.empresa.blackFridayPaginaAtiva!==false;
+  const bfDeadline=state.empresa.blackFridayEncerramento||'2026-11-21T11:00';
+  const autoClose=state.empresa.blackFridayEncerrarAutomaticamente!==false;
+  const countdownOn=state.empresa.blackFridayContadorAtivo!==false;
+  const expired=autoClose&&Date.now()>=Date.parse(bfDeadline+'-04:00');
+  const publicActive=campaignActive&&!expired;
   const permission=canManageSettings();
-  const campaignControls=`<section class="bf-activation" aria-label="Ativar ou encerrar a página da Black Friday"><div class="bf-activation-copy"><span class="overline">CONTROLE DA PÁGINA</span><h2>Publicação da Black Friday</h2><p>Ao desligar, a página deixa de apresentar a Neia e os produtos, mostra "Campanha encerrada" e o botão de Black Friday desaparece do site principal. Nenhum produto, preço ou acesso histórico é apagado.</p><strong class="bf-campaign-status ${campaignActive?'is-on':'is-off'}">${campaignActive?'● Página disponível ao público':'● Black Friday encerrada / página desativada'}</strong></div><div class="bf-activation-actions"><label class="bf-campaign-toggle"><input type="checkbox" id="bfPageActive" ${campaignActive?'checked':''} ${permission?'':'disabled'}><span>Publicar página da Black Friday</span></label><button class="btn primary" type="button" id="bfSavePageStatus" ${permission?'':'disabled'}>Salvar situação da página</button>${permission?'':'<small>Somente administradores podem ativar ou desativar a campanha.</small>'}</div></section>`;
+  const campaignControls=`<section class="bf-activation" aria-label="Ativar ou encerrar a página da Black Friday"><div class="bf-activation-copy"><span class="overline">CONTROLE DA PÁGINA</span><h2>Publicação da Black Friday</h2><p>Ao desligar, a página deixa de apresentar a Neia e os produtos, mostra "Campanha encerrada" e o botão de Black Friday desaparece do site principal. Nenhum produto, preço ou acesso histórico é apagado.</p><strong class="bf-campaign-status ${publicActive?'is-on':'is-off'}">${publicActive?'● Página disponível ao público':expired&&campaignActive?'● Encerrada pelo prazo programado':'● Black Friday encerrada / página desativada'}</strong></div><div class="bf-activation-actions"><label class="bf-campaign-toggle"><input type="checkbox" id="bfPageActive" ${campaignActive?'checked':''} ${permission?'':'disabled'}><span>Publicar página da Black Friday</span></label><label class="bf-campaign-toggle"><input type="checkbox" id="bfCountdownEnabled" ${countdownOn?'checked':''} ${permission?'':'disabled'}><span>Exibir contador regressivo</span></label><label class="field"><span>Data e hora de encerramento (MT)</span><input type="datetime-local" id="bfDeadline" value="${esc(bfDeadline)}" ${permission?'':'disabled'} required></label><small>Horário de Mato Grosso (UTC−4). Prazo inicial: sábado, 21/11/2026 às 11h. Para reabrir após o prazo, informe um novo horário futuro e habilite a página.</small><label class="bf-campaign-toggle"><input type="checkbox" id="bfAutoClose" ${autoClose?'checked':''} ${permission?'':'disabled'}><span>Encerrar automaticamente ao zerar</span></label><button class="btn primary" type="button" id="bfSavePageStatus" ${permission?'':'disabled'}>Salvar situação e prazo</button>${permission?'':'<small>Somente administradores podem ativar ou desativar a campanha.</small>'}</div></section>`;
   target.innerHTML=campaignControls+`<section class="bf-head"><div><span class="overline">CAMPANHA PROMOCIONAL</span><h2>Black Friday Universal</h2><p>Os produtos selecionados são exibidos automaticamente em <a href="/black-friday/" target="_blank" rel="noopener noreferrer">/black-friday/</a>, utilizando o cadastro e as imagens atuais.</p></div><div class="bf-selected"><strong>${selected}</strong><span>Produtos selecionados</span></div></section><section class="analyticsSection bf-only-analytics"><div class="analyticsSectionHead"><strong>Contador da Black Friday</strong><span>Visitas da página e cliques para WhatsApp; não representa vendas ou pessoas únicas.</span></div><div class="dateFilter bf-filter"><label>De <input id="bfMetricsFrom" type="date" value="${metricsFilter.from}"></label><label>Até <input id="bfMetricsTo" type="date" value="${metricsFilter.to}"></label><button class="btn small primary" id="bfApplyMetrics">Filtrar</button><button class="btn small" id="bfClearMetrics">Limpar</button></div><div class="metricGrid">${bfMetricCards(periodLabel)}</div></section><section class="sectionCard"><div class="sectionTools"><div><h2>Produtos participantes</h2><p>Marque qualquer portão, porta ou lixeira com preço válido. Promoções normais continuam independentes.</p></div><button class="btn primary" id="saveBlackFridayBtn">Salvar Black Friday</button></div>${list}<div class="bf-save-bottom"><button class="btn primary" id="saveBlackFridayBottomBtn">Salvar alterações da campanha</button></div></section>`;
   const apply=()=>{const from=$('#bfMetricsFrom').value,to=$('#bfMetricsTo').value;if((from&&!to)||(!from&&to)||from>to){toast('Informe um período válido.');return}metricsFilter={from,to};loadMetrics()};
   $('#bfApplyMetrics').onclick=apply;
@@ -401,22 +406,28 @@ async function saveBlackFridayPageStatus(){
   if(!canManageSettings())return toast('Somente administradores podem desligar a campanha.');
   const desired=Boolean($('#bfPageActive')?.checked);
   const current=state.empresa.blackFridayPaginaAtiva!==false;
-  if(desired===current)return toast('A situação da página já está salva.');
-  if(!desired && !window.confirm('Encerrar a Black Friday agora? O link mostrará CAMPANHA ENCERRADA e os botões da campanha ficarão ocultos no site principal. Os dados serão preservados.')){
+  const deadline=$('#bfDeadline').value;
+  const deadlineMs=Date.parse(deadline+'-04:00');
+  const countdown=$('#bfCountdownEnabled').checked;
+  const auto=$('#bfAutoClose').checked;
+  if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(deadline)||!Number.isFinite(deadlineMs)||new Date(deadlineMs-14400000).toISOString().slice(0,16)!==deadline)return toast('Informe uma data e hora válidas.');
+  if(desired===current&&deadline===(state.empresa.blackFridayEncerramento||'2026-11-21T11:00')&&countdown===(state.empresa.blackFridayContadorAtivo!==false)&&auto===(state.empresa.blackFridayEncerrarAutomaticamente!==false))return toast('A configuração já está salva.');
+  if(desired&&auto&&deadlineMs<=Date.now()&&!window.confirm('O prazo informado já passou. A campanha permanecerá encerrada. Salvar mesmo assim?'))return;
+  if(!desired && current && !window.confirm('Encerrar a Black Friday agora? O link mostrará CAMPANHA ENCERRADA e os botões da campanha ficarão ocultos no site principal. Os dados serão preservados.')){
     $('#bfPageActive').checked=current;return;
   }
   const button=$('#bfSavePageStatus');button.disabled=true;
-  const nextCompany={...state.empresa,blackFridayPaginaAtiva:desired};
+  const nextCompany={...state.empresa,blackFridayPaginaAtiva:desired,blackFridayEncerramento:deadline,blackFridayContadorAtivo:countdown,blackFridayEncerrarAutomaticamente:auto};
   try{
     const response=await api('state',{method:'PUT',body:JSON.stringify({
       state:{empresa:nextCompany},
-      audit:{action:desired?'Landing Page Black Friday ativada':'Landing Page Black Friday desativada',detail:desired?'Campanha aberta ao público':'Campanha encerrada, sem excluir produtos ou contadores',collection:'empresa'},
+      audit:{action:'Configuração Black Friday atualizada',detail:`Página ${desired?'habilitada':'desabilitada'} · prazo MT: ${deadline} · contador: ${countdown?'sim':'não'} · automático: ${auto?'sim':'não'}`,collection:'empresa'},
       version:stateVersion
     })});
     state.empresa={...nextCompany,...(response.state?.empresa||{})};
     state.produtos=Array.isArray(response.state?.produtos)?response.state.produtos:state.produtos;
     stateVersion=response.version||stateVersion;
-    renderBlackFriday();toast(desired?'Página Black Friday ativada.':'Black Friday encerrada. Histórico preservado.');
+    renderBlackFriday();toast(!desired||(auto&&deadlineMs<=Date.now())?'Black Friday encerrada. Histórico preservado.':'Configuração e prazo da Black Friday salvos.');
   }catch(error){
     toast(error.message);
     if(error.code==='STATE_CONFLICT'){

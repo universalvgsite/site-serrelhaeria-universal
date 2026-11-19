@@ -19,7 +19,10 @@ const DEFAULT_STATE = {
     adicionalFechaduraTetra: '',
     ga4Id: '',
     metaPixelId: '',
-    blackFridayPaginaAtiva: true
+    blackFridayPaginaAtiva: true,
+    blackFridayEncerramento: '2026-11-21T11:00',
+    blackFridayContadorAtivo: true,
+    blackFridayEncerrarAutomaticamente: true
   },
   clientes: [],
   vendedores: [],
@@ -68,12 +71,31 @@ function optionalMoney(value){
   const number=Number(value);
   return Number.isFinite(number)&&number>0?Math.round(number*100)/100:'';
 }
+// Horário de Mato Grosso (UTC-04:00). A data padrão vale também para o D1 antigo.
+function normalizeBFDeadline(value){
+  const fallback='2026-11-21T11:00';
+  if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value))return fallback;
+  const ms=Date.parse(value+'-04:00');
+  return Number.isFinite(ms)&&new Date(ms-4*3600000).toISOString().slice(0,16)===value?value:fallback;
+}
+function blackFridayStatus(company={},now=Date.now()){
+  const prazo=normalizeBFDeadline(company.blackFridayEncerramento);
+  const deadline=Date.parse(prazo+'-04:00');
+  const automatico=company.blackFridayEncerrarAutomaticamente!==false;
+  const manual=company.blackFridayPaginaAtiva!==false;
+  return {ativa:manual&&(!automatico||now<deadline),contadorAtivo:company.blackFridayContadorAtivo!==false,
+    encerramentoAutomatico:automatico,encerramento:new Date(deadline).toISOString(),
+    horarioServidor:new Date(now).toISOString(),motivo:!manual?'manual':automatico&&now>=deadline?'prazo':null};
+}
 function normalizeCompany(company={}){
   return {
     ...company,
     adicionalPortaoSocial:optionalMoney(company.adicionalPortaoSocial),
     adicionalFechaduraTetra:optionalMoney(company.adicionalFechaduraTetra),
-    blackFridayPaginaAtiva:company.blackFridayPaginaAtiva!==false
+    blackFridayPaginaAtiva:company.blackFridayPaginaAtiva!==false,
+    blackFridayEncerramento:normalizeBFDeadline(company.blackFridayEncerramento),
+    blackFridayContadorAtivo:company.blackFridayContadorAtivo!==false,
+    blackFridayEncerrarAutomaticamente:company.blackFridayEncerrarAutomaticamente!==false
   };
 }
 function normalizeProduct(product={},index=0){
@@ -355,6 +377,11 @@ async function route(context){
   const seg=path.split('/').filter(Boolean).map(decodeURIComponent);
   // Fotos antigas não consultam D1 nem sessões públicas.
   if(seg[0]==='media'&&seg[1]==='public'&&['GET','HEAD'].includes(method))return serveLegacyPublicPhoto(context,seg.slice(2).join('/'));
+  // Consulta leve: o polling do contador não cria tabelas nem consulta sessões.
+  if(path==='black-friday/status' && method==='GET'){
+    const row=await context.env.DB.prepare(`SELECT json_extract(data,'$.empresa') AS empresa FROM app_state WHERE id=?`).bind(STATE_ID).first();
+    return json(blackFridayStatus(safeParse(row?.empresa,{})));
+  }
   await ensureSchema(context.env.DB);
   const user=await getSession(context);
 
@@ -412,18 +439,12 @@ async function route(context){
     return json({empresa,products});
   }
 
-  // Status público sem informações administrativas. Lido também no site principal
-  // para ocultar os links da campanha quando ela for desligada no painel.
-  if(path==='black-friday/status' && method==='GET'){
-    const state=await getState(context.env.DB);
-    return json({ativa:state.empresa?.blackFridayPaginaAtiva!==false});
-  }
-
   // Black Friday: somente os produtos selecionados no painel e no mesmo D1.
   // A API não expõe outros registros do painel ou preços não promocionais.
   if(path==='black-friday' && method==='GET'){
     const state=await getState(context.env.DB);
-    const ativa=state.empresa?.blackFridayPaginaAtiva!==false;
+    const campaignStatus=blackFridayStatus(state.empresa);
+    const {ativa}=campaignStatus;
     const produtos=(!ativa?[]:(state.produtos||[])).filter(p=>
       ['Portão','Porta','Lixeira'].includes(p.categoria) && p.blackFridayAtiva===true && !p.arquivado &&
       p.siteAtivo!==false && p.status!=='indisponivel' && Boolean(p.imagem) &&
@@ -438,7 +459,7 @@ async function route(context){
        precoPromocional:Number(p.precoBlackFriday)
      }));
     const whatsapp=String(state.empresa?.whatsapp||'556536844696').replace(/\D/g,'');
-    return json({ativa,produtos,whatsapp});
+    return json({...campaignStatus,produtos,whatsapp});
   }
 
   if(path==='track' && method==='POST'){
@@ -597,4 +618,4 @@ export async function onRequest(context){
   }
 }
 
-export {photoType,photoBase64,uploadPublicPhoto,serveLegacyPublicPhoto};
+export {photoType,photoBase64,uploadPublicPhoto,serveLegacyPublicPhoto,blackFridayStatus,normalizeBFDeadline};

@@ -1,0 +1,26 @@
+UNIVERSAL — ATUALIZAÇÃO BLACK FRIDAY V17 (CONTADOR E ENCERRAMENTO)
+Base: ZIP atualizado de 18/11/2026, commit ef00ede881dd34a8e115d444dd7d651fdae01b70.
+
+1. Extraia o ZIP. Na raiz do repositório GitHub, Add file > Upload files.
+2. Envie SOMENTE as pastas public e functions deste pacote (arquivos novos/alterados).
+   Não apague arquivos antigos. Não substitua o repositório inteiro.
+3. Confirme os caminhos e faça um commit. Aguarde deploy verde no Cloudflare.
+4. Confira site principal, /black-friday/, /painel/ e link individual de uma oferta.
+   Verifique foto, zoom e mensagem do WhatsApp.
+5. Painel > Black Friday > Controle da página: confirme 21/11/2026 11:00,
+   contador e encerramento automático marcados, e que a página está habilitada.
+   O prazo já é padrão, não é obrigatório salvar se não houver mudança.
+   Somente administrador altera o prazo. Se alterar, clique em Salvar situação e prazo.
+
+Encerramento às 11h MT (15h UTC): API não retorna ofertas; página exibe campanha
+encerrada; páginas individuais param de mostrar ofertas; botão no site principal fica oculto.
+Abas abertas são atualizadas pelo relógio sincronizado e por consulta de status periódica.
+Não apaga produtos, histórico, fotos ou preços. Não execute SQL.
+Não altere GITHUB_PHOTOS_TOKEN, D1, Cloudflare ou configurações do Supabase.
+Para prorrogar, defina novo prazo futuro e mantenha a página habilitada.
+
+Validação: 16 testes Node e regressão existentes aprovados, incluindo fotos GitHub,
+links, estado antes/depois das 11h e contador simulado. O Chromium local bloqueou
+a navegação de testes; validação visual real no iPhone e em produção ainda necessária.
+O pacote contém somente os arquivos de publicação alterados, não contém credenciais,
+backup, fotos ou vídeos.

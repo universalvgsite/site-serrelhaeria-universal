@@ -13,7 +13,9 @@
 <title>Produto em oferta | Black Friday Universal</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="styles.css?v=16a">
-<script src="app.js?v=16a" defer></script>
+<link rel="stylesheet" href="/black-friday/countdown.css?v=17">
+<script src="/black-friday/countdown.js?v=17" defer></script>
+<script src="app.js?v=17" defer></script>
 </head>
 <body>
 <header class="header">
@@ -22,6 +24,7 @@
 </header>
 <main class="container">
 <nav class="breadcrumb" aria-label="Localização"><a href="/black-friday/#ofertas">← VOLTAR ÀS OFERTAS</a></nav>
+<section id="bfCountdown" class="bf-countdown bf-countdown-compact" hidden aria-label="Tempo restante da Black Friday"></section>
 <div id="loading" class="message" role="status">Carregando os detalhes do produto...</div>
 <section id="product" class="product" hidden aria-label="Detalhes do produto">
   <div class="image-column">
@@ -41,6 +44,7 @@
       <div id="oldPrice" class="old-price"></div>
       <div class="price-caption">PREÇO BLACK FRIDAY</div>
       <div id="newPrice" class="new-price"></div>
+      <p class="bf-savings" id="bfSavings" hidden></p>
       <p class="value-note">Valor anunciado para o modelo selecionado. Consulte a disponibilidade com a equipe.</p>
     </div>
     <a id="buy" class="buy-button" href="#" target="_blank" rel="noopener noreferrer">COMPRAR PELO WHATSAPP <span aria-hidden="true">↗</span></a>

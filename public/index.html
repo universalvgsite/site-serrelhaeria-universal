@@ -8,7 +8,7 @@
   <title>Serralheria e Metalúrgica Universal</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/styles.css?v=25">
-  <link rel="stylesheet" href="/black-friday-site.css?v=1">
+  <link rel="stylesheet" href="/black-friday-site.css?v=17">
 </head>
 <body>
   <header>
@@ -17,7 +17,7 @@
         <img class="site-logo" src="/universal-logo.png" alt="Serralheria e Metalúrgica Universal">
       </a>
       <nav class="menu" id="menu">
-        <a href="#inicio">Início</a><a class="bfMenuLink" href="/black-friday/">★ Black Friday</a><a id="catalogMenuLink" href="#catalogo" hidden>Portões, portas e lixeiras</a><a href="#sob-medida">Sob medida</a><a href="/estruturas">Estruturas</a><a href="#contato">Contato</a>
+        <a href="#inicio">Início</a><a class="bfMenuLink" hidden href="/black-friday/">★ Black Friday</a><a id="catalogMenuLink" href="#catalogo" hidden>Portões, portas e lixeiras</a><a href="#sob-medida">Sob medida</a><a href="/estruturas">Estruturas</a><a href="#contato">Contato</a>
       </nav>
       <div class="navContacts" aria-label="Contatos da Universal">
         <a class="topCall" id="topCall" href="tel:+556536844696" aria-label="Ligar para a Universal no número (65) 3684-4696">
@@ -42,7 +42,7 @@
           <div class="heroBtns">
             <a class="cta wa-generic" id="catalogCta" href="#">Solicitar orçamento</a>
             <a class="ghost wa-generic" href="#">Falar no WhatsApp</a>
-            <a class="bfSiteButton" href="/black-friday/" aria-label="Conhecer ofertas selecionadas da Black Friday">★ BLACK FRIDAY — OFERTAS ESPECIAIS</a>
+            <a class="bfSiteButton" hidden href="/black-friday/" aria-label="Conhecer ofertas selecionadas da Black Friday">★ BLACK FRIDAY — OFERTAS ESPECIAIS</a>
           </div>
           <div class="heroInfo"><span><b>Portão padrão:</b> 3,10 × 2,10 m</span><span><b>Porta padrão:</b> 0,80 × 2,10 m</span><span><b>Várzea Grande:</b> frete grátis</span><span><b>Cuiabá:</b> R$ 100</span></div>
         </div>
@@ -106,20 +106,7 @@
 
   <dialog id="productModal" class="modal"><div class="modalBox"><button class="close" id="closeModal" aria-label="Fechar">×</button><div id="modalBody"></div></div></dialog>
   <script src="/app.js?v=25" defer></script>
-  <script>
-  // A campanha pode ser encerrada no painel, sem alterar o catálogo ou a URL do site.
-  (async function(){
-    try{
-      const response=await fetch('/api/black-friday/status',{cache:'no-store'});
-      if(!response.ok)return;
-      const data=await response.json();
-      if(data.ativa===false){
-        document.querySelectorAll('.bfMenuLink,.bfSiteButton').forEach(el=>{
-          el.hidden=true;el.style.setProperty('display','none','important');
-        });
-      }
-    }catch(err){/* outras funcionalidades do site permanecem independentes */}
-  })();
-  </script>
+  <script src="/black-friday/countdown.js?v=17" defer></script>
+  <script defer src="/black-friday/status-site.js?v=17"></script>
 </body>
 </html>
