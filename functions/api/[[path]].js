@@ -217,16 +217,23 @@ async function writePublicPhotoToGitHub(context,contentBase64,type,size,name='fo
   });}
   catch(err){
     console.error('Falha de rede no upload GitHub:',String(err?.name||'NetworkError'));
-    return json({error:'O servidor não conseguiu conectar ao GitHub.',code:'PHOTO_GITHUB_NETWORK'},502);
+    // Nao usar HTTP 502: proxies Cloudflare podem substituir o JSON por uma
+    // pagina HTML generica de Bad Gateway, ocultando o diagnostico.
+    return json({error:'Falha de comunicação entre Cloudflare e GitHub. Nenhuma foto foi gravada.',code:'PHOTO_GITHUB_NETWORK',stage:'github-request'},424);
   }
   if(!stored.ok){
     console.error('GitHub recusou foto pública. HTTP:',stored.status);
-    const message=stored.status===401||stored.status===403||stored.status===404
-      ?'O GitHub recusou a credencial. Verifique o token e a permissão Contents: Read and write.'
-      :stored.status===409||stored.status===422
-      ?'O GitHub recusou a gravação. Tente novamente após alguns segundos.'
-      :'O GitHub não aceitou a foto neste momento.';
-    return json({error:message,code:'PHOTO_GITHUB_REJECTED',githubStatus:stored.status},502);
+    const status=stored.status;
+    const detail=status===401?'Token GitHub inválido, expirado ou revogado.'
+      :status===403?'Acesso negado pelo GitHub. Verifique a permissão Contents (Read and write), as restrições do token e o limite de requisições.'
+      :status===404?'O token não consegue acessar o repositório universalvgsite/site-serrelhaeria-universal.'
+      :status===409?'Conflito no GitHub ao gravar a imagem. Tente novamente.'
+      :status===422?'O GitHub rejeitou o conteúdo enviado. Verifique o tamanho da imagem e o estado do repositório.'
+      :status===429?'Limite de requisições do GitHub atingido. Tente mais tarde.'
+      :`Resposta inesperada da API do GitHub (HTTP ${status}).`;
+    // 424 sinaliza dependencia externa e preserva o JSON para o painel.
+    // Nunca retornar a credencial nem cabecalhos de autorizacao.
+    return json({error:`GitHub HTTP ${status}: ${detail}`,code:'PHOTO_GITHUB_REJECTED',githubStatus:status,stage:'github-response'},424);
   }
   return json({ok:true,key,scope:'public',url:`/${PHOTO_DIR}/${key}`,name,type,size,pendingDeploy:true});
 }
