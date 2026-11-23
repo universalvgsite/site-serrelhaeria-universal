@@ -543,6 +543,9 @@ async function route(context){
   }
 
   if(path==='upload' && method==='POST'){
+    // Somente usuários autenticados do painel podem gravar arquivos nos armazenamentos.
+    const authError=requireAuth(user);
+    if(authError)return authError;
     const origin=req.headers.get('origin');
     if(origin&&origin!==url.origin)return json({error:'Origem não permitida.'},403);
     const form=await req.formData(); const file=form.get('file'); let scope=String(form.get('scope')||'private');
