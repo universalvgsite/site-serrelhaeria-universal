@@ -179,6 +179,67 @@ function photoBase64(bytes){
   let out='';for(let i=0;i<bytes.length;i+=24576)out+=btoa(String.fromCharCode(...bytes.subarray(i,i+24576)));
   return out;
 }
+// Upload novo: a conversão Base64 é feita no navegador, evitando estourar
+// o orçamento de CPU do Cloudflare Pages Free (10 ms por invocação).
+// O servidor valida tamanho, codificação e assinatura do arquivo antes de
+// aceitar a foto. O token GitHub permanece exclusivamente no servidor.
+function validateEncodedPublicPhoto(data){
+  const encoded=data?.contentBase64;
+  const declaredType=String(data?.type||'');
+  if(!PHOTO_TYPES.includes(declaredType))return {error:'Envie uma imagem JPG, PNG ou WebP.',status:415};
+  if(typeof encoded!=='string'||encoded.length<8||encoded.length%4!==0||encoded.length>Math.ceil(PHOTO_MAX_BYTES/3)*4)
+    return {error:'A foto otimizada precisa ter até 600 KB.',status:413};
+  if(!/^[A-Za-z0-9+/]+={0,2}$/.test(encoded))return {error:'Dados da foto inválidos.',status:400};
+  const padding=(encoded.endsWith('==')?2:encoded.endsWith('=')?1:0);
+  const byteCount=encoded.length/4*3-padding;
+  if(byteCount<=0||byteCount>PHOTO_MAX_BYTES)return {error:'A foto otimizada precisa ter até 600 KB.',status:413};
+  const declaredSize=Number(data?.size);
+  if(!Number.isSafeInteger(declaredSize)||declaredSize!==byteCount)
+    return {error:'Tamanho da imagem não confere. Selecione novamente a foto.',status:400};
+  // Somente o cabeçalho é decodificado aqui; não reprocessamos centenas de KB no Worker.
+  let prefix;
+  try{prefix=Uint8Array.from(atob(encoded.slice(0,Math.min(encoded.length,32))),c=>c.charCodeAt(0));}
+  catch{return {error:'Codificação da imagem inválida.',status:400};}
+  const actualType=photoType(prefix);
+  if(actualType!==declaredType)return {error:'O conteúdo não corresponde ao formato da foto.',status:415};
+  return {contentBase64:encoded,type:actualType,size:byteCount};
+}
+async function writePublicPhotoToGitHub(context,contentBase64,type,size,name='foto'){
+  const token=String(context.env.GITHUB_PHOTOS_TOKEN||'').trim();
+  if(!token)return json({error:'Configure o segredo GITHUB_PHOTOS_TOKEN no Cloudflare Pages.',code:'PHOTO_TOKEN_MISSING'},503);
+  const ext={'image/jpeg':'jpg','image/png':'png','image/webp':'webp'}[type];
+  const key=`gh-${Date.now()}-${crypto.randomUUID()}.${ext}`;
+  const path=`public/${PHOTO_DIR}/${key}`;
+  const body=JSON.stringify({message:`Adicionar foto de produto ${key}`,content:contentBase64,branch:PHOTO_BRANCH});
+  let stored;
+  try{stored=await fetch(`https://api.github.com/repos/${PHOTO_REPO}/contents/${path}`,{
+    method:'PUT',redirect:'error',headers:{'authorization':`Bearer ${token}`,'accept':'application/vnd.github+json','content-type':'application/json','user-agent':'Universal-Pages-Photo-Upload','x-github-api-version':'2022-11-28'},body
+  });}
+  catch(err){
+    console.error('Falha de rede no upload GitHub:',String(err?.name||'NetworkError'));
+    return json({error:'O servidor não conseguiu conectar ao GitHub.',code:'PHOTO_GITHUB_NETWORK'},502);
+  }
+  if(!stored.ok){
+    console.error('GitHub recusou foto pública. HTTP:',stored.status);
+    const message=stored.status===401||stored.status===403||stored.status===404
+      ?'O GitHub recusou a credencial. Verifique o token e a permissão Contents: Read and write.'
+      :stored.status===409||stored.status===422
+      ?'O GitHub recusou a gravação. Tente novamente após alguns segundos.'
+      :'O GitHub não aceitou a foto neste momento.';
+    return json({error:message,code:'PHOTO_GITHUB_REJECTED',githubStatus:stored.status},502);
+  }
+  return json({ok:true,key,scope:'public',url:`/${PHOTO_DIR}/${key}`,name,type,size,pendingDeploy:true});
+}
+async function uploadEncodedPublicPhoto(context,data){
+  // Não decodificar nem reencodar 600 KB aqui: isso poderia exceder CPU Free.
+  if(!context.env.GITHUB_PHOTOS_TOKEN)
+    return json({error:'Configure o segredo GITHUB_PHOTOS_TOKEN no Cloudflare Pages.',code:'PHOTO_TOKEN_MISSING'},503);
+  const parsed=validateEncodedPublicPhoto(data);
+  if(parsed.error)return json({error:parsed.error,code:'PHOTO_INVALID',status:parsed.status},parsed.status);
+  return writePublicPhotoToGitHub(context,parsed.contentBase64,parsed.type,parsed.size,String(data?.name||'foto'));
+}
+// Mantém compatibilidade com o upload antigo (ex.: anexos e painéis em cache).
+// Para fotos novas, o painel usa /api/upload/public-photo, mais leve.
 async function uploadPublicPhoto(context,file){
   const token=String(context.env.GITHUB_PHOTOS_TOKEN||'').trim();
   if(!token)return json({error:'Configure o segredo GITHUB_PHOTOS_TOKEN no Cloudflare Pages.'},503);
@@ -187,20 +248,7 @@ async function uploadPublicPhoto(context,file){
   const bytes=new Uint8Array(await file.arrayBuffer());
   const type=photoType(bytes);
   if(type!==file.type)return json({error:'O conteúdo do arquivo não corresponde a uma imagem permitida.'},415);
-  const ext={'image/jpeg':'jpg','image/png':'png','image/webp':'webp'}[type];
-  const key=`gh-${Date.now()}-${crypto.randomUUID()}.${ext}`;
-  const path=`public/${PHOTO_DIR}/${key}`;
-  const body=JSON.stringify({message:`Adicionar foto de produto ${key}`,content:photoBase64(bytes),branch:PHOTO_BRANCH});
-  let stored;
-  try{stored=await fetch(`https://api.github.com/repos/${PHOTO_REPO}/contents/${path}`,{
-    method:'PUT',redirect:'error',headers:{'authorization':`Bearer ${token}`,'accept':'application/vnd.github+json','content-type':'application/json','user-agent':'Universal-Pages-Photo-Upload','x-github-api-version':'2022-11-28'},body
-  });}catch{return json({error:'Não foi possível conectar ao GitHub. Tente novamente.'},502);}
-  if(!stored.ok){
-    console.error('GitHub: falha no envio de foto pública.',stored.status);
-    const message=stored.status===401||stored.status===403||stored.status===404?'Confira a validade do token e a permissão Contents: Read and write no repositório correto.':stored.status===409||stored.status===422?'O GitHub recusou a gravação. Tente novamente após alguns segundos.':'GitHub indisponível ou limite de requisições atingido. Tente novamente.';
-    return json({error:message},502);
-  }
-  return json({ok:true,key,scope:'public',url:`/${PHOTO_DIR}/${key}`,name:file.name,type,size:file.size,pendingDeploy:true});
+  return writePublicPhotoToGitHub(context,photoBase64(bytes),type,file.size,file.name);
 }
 async function serveLegacyPublicPhoto(context,key){
   if(!SAFE_PHOTO_KEY.test(key))return new Response('Not found',{status:404});
@@ -381,6 +429,22 @@ async function route(context){
   if(path==='black-friday/status' && method==='GET'){
     const row=await context.env.DB.prepare(`SELECT json_extract(data,'$.empresa') AS empresa FROM app_state WHERE id=?`).bind(STATE_ID).first();
     return json(blackFridayStatus(safeParse(row?.empresa,{})));
+  }
+  // Rota rápida e autenticada: dispensa 4 CREATE TABLE e conversão Base64 no Worker.
+  // Evita excesso de CPU no plano gratuito, sem tocar no D1 nem nos produtos.
+  if(path==='upload/public-photo' && method==='POST'){
+    const user=await getSession(context);
+    const authError=requireAuth(user);
+    if(authError)return authError;
+    const origin=req.headers.get('origin');
+    if(origin&&origin!==url.origin)return json({error:'Origem não permitida.'},403);
+    if(!/^application\/json(?:;|$)/i.test(req.headers.get('content-type')||''))
+      return json({error:'Formato de upload inválido.'},415);
+    const declaredLength=Number(req.headers.get('content-length')||0);
+    if(declaredLength>900000)return json({error:'Foto excede o limite permitido.'},413);
+    let data;
+    try{data=await req.json()}catch{return json({error:'Dados da foto inválidos.'},400);}
+    return uploadEncodedPublicPhoto(context,data);
   }
   await ensureSchema(context.env.DB);
   const user=await getSession(context);
@@ -621,4 +685,4 @@ export async function onRequest(context){
   }
 }
 
-export {photoType,photoBase64,uploadPublicPhoto,serveLegacyPublicPhoto,blackFridayStatus,normalizeBFDeadline};
+export {photoType,photoBase64,uploadPublicPhoto,uploadEncodedPublicPhoto,validateEncodedPublicPhoto,serveLegacyPublicPhoto,blackFridayStatus,normalizeBFDeadline};

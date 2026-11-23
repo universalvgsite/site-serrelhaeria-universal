@@ -31,7 +31,12 @@ async function api(path,options={}){
   const response=await fetch('/api/'+path,{credentials:'same-origin',...options,headers:{...(options.body instanceof FormData?{}:{'content-type':'application/json'}),...(options.headers||{})}});
   let data={};
   try{data=await response.json()}catch{}
-  if(!response.ok){const error=new Error(data.error||'Não foi possível concluir a operação.');error.status=response.status;error.code=data.code;throw error}
+  if(!response.ok){
+    const fallback=response.status===502
+      ?'Erro HTTP 502 no servidor Cloudflare; a foto não foi gravada. Confira a implantação ou os logs de Functions.'
+      :`Falha HTTP ${response.status} ao comunicar com o servidor.`;
+    const error=new Error(data.error||fallback);error.status=response.status;error.code=data.code;throw error;
+  }
   return data;
 }
 
@@ -310,6 +315,20 @@ async function optimizeProductPhoto(file){
   }finally{URL.revokeObjectURL(source)}
 }
 let productPhotoPreviewUrl='';
+// Convertemos o arquivo otimizado fora do Worker: o plano Free limita CPU a 10 ms.
+function browserPhotoBase64(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>{
+      const result=String(reader.result||'');
+      const comma=result.indexOf(',');
+      if(comma<0)return reject(new Error('Não foi possível preparar a foto.'));
+      resolve(result.slice(comma+1));
+    };
+    reader.onerror=()=>reject(new Error('Não foi possível ler a foto escolhida.'));
+    reader.readAsDataURL(file);
+  });
+}
 async function uploadProductImage(event){
   const input=event.target,file=input.files?.[0];if(!file)return;
   const status=$('#uploadStatus'),save=$('#saveProductBtn'),urlField=$('#pImageUrl'),preview=$('#imagePreview');
@@ -318,8 +337,11 @@ async function uploadProductImage(event){
     const optimized=await optimizeProductPhoto(file);
     if(!input.isConnected)return;
     status.textContent='Enviando foto ao GitHub...';
-    const form=new FormData();form.append('scope','public');form.append('file',optimized);
-    const result=await api('upload',{method:'POST',body:form});
+    const contentBase64=await browserPhotoBase64(optimized);
+    if(!input.isConnected)return;
+    const result=await api('upload/public-photo',{method:'POST',body:JSON.stringify({
+      contentBase64,type:optimized.type,size:optimized.size,name:file.name
+    })});
     if(!input.isConnected)return;
     if(productPhotoPreviewUrl)URL.revokeObjectURL(productPhotoPreviewUrl);
     productPhotoPreviewUrl=URL.createObjectURL(optimized);
