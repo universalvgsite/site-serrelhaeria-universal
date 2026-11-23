@@ -213,13 +213,19 @@ async function writePublicPhotoToGitHub(context,contentBase64,type,size,name='fo
   const body=JSON.stringify({message:`Adicionar foto de produto ${key}`,content:contentBase64,branch:PHOTO_BRANCH});
   let stored;
   try{stored=await fetch(`https://api.github.com/repos/${PHOTO_REPO}/contents/${path}`,{
-    method:'PUT',redirect:'error',headers:{'authorization':`Bearer ${token}`,'accept':'application/vnd.github+json','content-type':'application/json','user-agent':'Universal-Pages-Photo-Upload','x-github-api-version':'2022-11-28'},body
+    method:'PUT',redirect:'manual',headers:{'authorization':`Bearer ${token}`,'accept':'application/vnd.github+json','content-type':'application/json','user-agent':'Universal-Pages-Photo-Upload','x-github-api-version':'2022-11-28'},body
   });}
   catch(err){
     console.error('Falha de rede no upload GitHub:',String(err?.name||'NetworkError'));
     // Nao usar HTTP 502: proxies Cloudflare podem substituir o JSON por uma
     // pagina HTML generica de Bad Gateway, ocultando o diagnostico.
     return json({error:'Falha de comunicação entre Cloudflare e GitHub. Nenhuma foto foi gravada.',code:'PHOTO_GITHUB_NETWORK',stage:'github-request'},424);
+  }
+  // Workers não aceita redirect:'error'; com 'manual' nenhum salto é seguido
+  // e a credencial nunca é encaminhada para um destino redirecionado.
+  if(stored.status>=300&&stored.status<400){
+    console.error('GitHub redirecionou indevidamente o upload. HTTP:',stored.status);
+    return json({error:'O GitHub retornou um redirecionamento inesperado. Nenhuma foto foi gravada.',code:'PHOTO_GITHUB_REDIRECT',githubStatus:stored.status,stage:'github-response'},424);
   }
   if(!stored.ok){
     console.error('GitHub recusou foto pública. HTTP:',stored.status);
